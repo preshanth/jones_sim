@@ -1,0 +1,188 @@
+\documentclass{aastex631}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{bm}
+
+\shorttitle{Jones Matrix Forward Modeling}
+\shortauthors{Jones Forward Model}
+
+\begin{document}
+
+\title{Forward Modeling of Radio Interferometric Visibilities using Jones Matrix Formalism}
+
+\author{Authors}
+\affiliation{Institution}
+
+\begin{abstract}
+We present a comprehensive forward modeling framework for radio interferometric visibilities using the Jones matrix formalism. Our implementation covers the complete range of antenna-based and baseline-based corruptions described by the Hamaker-Bregman-Sault (HBS) measurement equation, including frequency-dependent effects, polarization leakage, and ionospheric corrections.
+\end{abstract}
+
+\keywords{radio astronomy, interferometry, calibration, Jones matrices}
+
+\section{Introduction}
+
+Radio interferometric observations require careful modeling of instrumental and propagation effects that corrupt the measured visibilities. The Jones matrix formalism provides a mathematically rigorous framework for describing these effects and forms the foundation for both forward modeling and calibration procedures.
+
+\section{The Measurement Equation}
+
+\subsection{Hamaker-Bregman-Sault Formulation}
+
+The relationship between observed and ideal visibilities follows the HBS measurement equation:
+
+\begin{equation}
+\mathbf{V}_{ij}^{\mathrm{obs}} = \mathbf{M}_{ij} \left( \mathbf{J}_i \otimes \mathbf{J}_j^{\dagger} \right) \mathbf{V}_{ij}^{\mathrm{ideal}} \mathbf{M}_{ij}^{\dagger}
+\end{equation}
+
+where $\mathbf{V}_{ij}^{\mathrm{obs}}$ and $\mathbf{V}_{ij}^{\mathrm{ideal}}$ are the observed and ideal visibility vectors for baseline $ij$, $\mathbf{J}_i$ is the Jones matrix for antenna $i$, and $\mathbf{M}_{ij}$ represents baseline-based correlator effects.
+
+\subsection{Jones Matrix Factorization}
+
+Each antenna's Jones matrix can be factorized into individual effects:
+
+\begin{equation}
+\mathbf{J}_i = \mathbf{P}_i \mathbf{E}_i \mathbf{D}_i \mathbf{G}_i \mathbf{B}_i \mathbf{T}_i \mathbf{R}_i
+\end{equation}
+
+where the terms are applied in order of physical occurrence:
+\begin{itemize}
+\item $\mathbf{P}_i$: Parallactic angle rotation
+\item $\mathbf{E}_i$: Elevation/optical effects  
+\item $\mathbf{D}_i$: Instrumental polarization (leakage)
+\item $\mathbf{G}_i$: Electronic gains
+\item $\mathbf{B}_i$: Bandpass (frequency response)
+\item $\mathbf{T}_i$: Ionospheric effects (TEC, delays)
+\item $\mathbf{R}_i$: R/L delay difference
+\end{itemize}
+
+\section{Jones Matrix Implementations}
+
+All Jones matrices are implemented as $2 \times 2$ complex matrices operating on dual-polarization signals.
+
+\subsection{Amplitude Gains}
+\begin{equation}
+\mathbf{G}_{\mathrm{amp}} = \begin{bmatrix} A_{XX} & 0 \\ 0 & A_{YY} \end{bmatrix}
+\end{equation}
+where $A_{XX}, A_{YY} > 0$ are real amplitude gains.
+
+\subsection{Phase Corrections}
+\begin{equation}
+\mathbf{G}_{\mathrm{phase}} = \begin{bmatrix} e^{i\phi_{XX}} & 0 \\ 0 & e^{i\phi_{YY}} \end{bmatrix}
+\end{equation}
+
+\subsection{Complex Gains}
+\begin{equation}
+\mathbf{G}_{\mathrm{diag}} = \begin{bmatrix} g_{XX} & 0 \\ 0 & g_{YY} \end{bmatrix}
+\end{equation}
+where $g_{XX} = A_{XX} e^{i\phi_{XX}}$ and $g_{YY} = A_{YY} e^{i\phi_{YY}}$.
+
+\subsection{Full Complex Matrix}
+\begin{equation}
+\mathbf{G}_{\mathrm{full}} = \begin{bmatrix} g_{XX} & g_{XY} \\ g_{YX} & g_{YY} \end{bmatrix}
+\end{equation}
+
+\subsection{Instrumental Polarization (Leakage)}
+\begin{equation}
+\mathbf{D} = \begin{bmatrix} 1 & d_{XY} \\ d_{YX} & 1 \end{bmatrix}
+\end{equation}
+where $d_{XY}$ and $d_{YX}$ are complex leakage terms.
+
+\subsection{Bandpass Effects}
+\begin{equation}
+\mathbf{B}(\nu) = \begin{bmatrix} b_{XX}(\nu) & 0 \\ 0 & b_{YY}(\nu) \end{bmatrix}
+\end{equation}
+
+\subsection{Delay Terms}
+\begin{equation}
+\mathbf{B}_{\mathrm{delay}}(\nu) = \begin{bmatrix} 
+e^{i 2\pi \tau_{XX}(\nu - \nu_c)} & 0 \\ 
+0 & e^{i 2\pi \tau_{YY}(\nu - \nu_c)} 
+\end{bmatrix}
+\end{equation}
+where $\tau_{XX}, \tau_{YY}$ are delays and $\nu_c$ is the reference frequency.
+
+\subsection{TEC Corrections}
+\begin{equation}
+\mathbf{T}(\nu) = \begin{bmatrix} 
+e^{i \alpha_{XX}(\nu)} & 0 \\ 
+0 & e^{i \alpha_{YY}(\nu)} 
+\end{bmatrix}
+\end{equation}
+where
+\begin{equation}
+\alpha_{XX/YY}(\nu) = 2\pi t_{XX/YY}\left(\nu^{-1} + \frac{\log(\nu_{\min}) - \log(\nu_{\max})}{\nu_{\max} - \nu_{\min}}\right) + \theta_{XX/YY}
+\end{equation}
+and $t_{XX/YY}$ are differential TEC values with constant phase offsets $\theta_{XX/YY}$.
+
+\subsection{Parallactic Angle}
+\begin{equation}
+\mathbf{P}(\chi) = \begin{bmatrix} 
+\cos(\chi) & -\sin(\chi) \\ 
+\sin(\chi) & \cos(\chi) 
+\end{bmatrix}
+\end{equation}
+where $\chi$ is the parallactic angle.
+
+\subsection{Rotation Effects}
+\begin{equation}
+\mathbf{R}_{\mathrm{rot}}(\theta) = \begin{bmatrix} 
+\cos(\theta) & -\sin(\theta) \\ 
+\sin(\theta) & \cos(\theta) 
+\end{bmatrix}
+\end{equation}
+
+\subsection{Rotation Measure}
+\begin{equation}
+\mathbf{R}_{\mathrm{RM}}(\nu) = \begin{bmatrix} 
+\cos(\lambda^2 \mathrm{RM}) & -\sin(\lambda^2 \mathrm{RM}) \\ 
+\sin(\lambda^2 \mathrm{RM}) & \cos(\lambda^2 \mathrm{RM}) 
+\end{bmatrix}
+\end{equation}
+where $\lambda = c/\nu$ and RM is the rotation measure.
+
+\subsection{Crosshand Phase}
+\begin{equation}
+\mathbf{G}_{\mathrm{cross}} = \begin{bmatrix} e^{i\theta} & 0 \\ 0 & 1 \end{bmatrix}
+\end{equation}
+
+\subsection{R/L Delay Difference}
+Based on EVLA documentation, the R/L delay difference manifests as:
+\begin{equation}
+\mathbf{R}_{\mathrm{RL}}(\nu) = \begin{bmatrix} 
+\cos(\Delta\theta/2) & i\sin(\Delta\theta/2) \\ 
+-i\sin(\Delta\theta/2) & \cos(\Delta\theta/2) 
+\end{bmatrix}
+\end{equation}
+where $\Delta\theta(\nu) = 2\pi \Delta\tau (\nu - \nu_c)$ and $\Delta\tau$ is the R/L delay difference.
+
+\section{Kronecker Product Implementation}
+
+The visibility corruption is implemented via the Kronecker product:
+\begin{equation}
+\mathbf{V}_{ij}^{\mathrm{obs}} = (\mathbf{J}_i \otimes \mathbf{J}_j^{\dagger}) \mathbf{V}_{ij}^{\mathrm{ideal}}
+\end{equation}
+
+For $2 \times 2$ Jones matrices, this produces $4 \times 4$ Mueller-like transformations operating on the $[XX, XY, YX, YY]$ correlation vector.
+
+\section{Baseline-Based Effects}
+
+Optional baseline-based correlator effects are implemented as $4 \times 4$ Mueller matrices:
+\begin{equation}
+\mathbf{M}_{ij} = \mathbf{I} + \delta\mathbf{M}_{ij}
+\end{equation}
+where $\delta\mathbf{M}_{ij}$ represents small baseline-dependent corrections.
+
+\section{Implementation Strategy}
+
+Our forward modeling approach:
+\begin{enumerate}
+\item Generate Jones matrices for each effect and antenna
+\item Multiply matrices in correct physical order
+\item Apply Kronecker product for baseline visibilities
+\item Optionally apply baseline-based Mueller corrections
+\end{enumerate}
+
+\section{Conclusions}
+
+This comprehensive Jones matrix framework enables accurate forward modeling of all major effects in radio interferometry, providing the foundation for robust calibration algorithms and simulation studies.
+
+\end{document}

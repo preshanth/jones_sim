@@ -1,0 +1,135 @@
+\documentclass{aastex631}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{bm}
+
+\shorttitle{Jones Matrix Forward Modeling}
+\shortauthors{Jones Forward Model}
+
+\begin{document}
+
+\title{Forward Modeling of Radio Interferometric Visibilities using Jones Matrix Formalism}
+
+\author{Authors}
+\affiliation{Institution}
+
+\begin{abstract}
+Mathematical formulation for forward modeling radio interferometric visibilities using Jones matrices, validated against EVLA memo 207.
+\end{abstract}
+
+\keywords{radio astronomy, interferometry, calibration, Jones matrices}
+
+\section{Measurement Equation}
+
+\subsection{Core Equation}
+\begin{equation}
+\mathbf{V}_{ij}^{\mathrm{obs}} = \mathbf{M}_{ij} \left( \mathbf{J}_i \otimes \mathbf{J}_j^{\dagger} \right) \mathbf{V}_{ij}^{\mathrm{ideal}} \mathbf{M}_{ij}^{\dagger}
+\end{equation}
+
+\subsection{Jones Matrix Factorization}
+\begin{equation}
+\mathbf{J}_i = \mathbf{P}_i \mathbf{E}_i \mathbf{X}_i \mathbf{G}_i \mathbf{B}_i \mathbf{T}_i \mathbf{R}_i \mathbf{C}_i
+\end{equation}
+
+\section{Individual Jones Matrices}
+
+\subsection{Parallactic Angle}
+\begin{equation}
+\mathbf{P}(\Psi) = \begin{bmatrix} 
+\cos(\Psi) & \sin(\Psi) \\ 
+-\sin(\Psi) & \cos(\Psi) 
+\end{bmatrix}
+\end{equation}
+
+\subsection{Combined Leakage and Misalignment}
+\begin{equation}
+\mathbf{X} = \begin{bmatrix} 1 & T_{hv} \\ T_{vh} & 1 \end{bmatrix}
+\end{equation}
+where:
+\begin{align}
+T_{hv} &= D_{hv} + \tan(\theta) \\
+T_{vh} &= D_{vh} - \tan(\theta)
+\end{align}
+
+\subsection{Electronic Gains}
+\begin{equation}
+\mathbf{G} = \begin{bmatrix} g_{XX} & 0 \\ 0 & g_{YY} \end{bmatrix}
+\end{equation}
+where $g_{XX} = A_{XX} e^{i\phi_{XX}}$, $g_{YY} = A_{YY} e^{i\phi_{YY}}$
+
+\subsection{Bandpass/Delay}
+\begin{equation}
+\mathbf{B}(\nu) = \begin{bmatrix} 
+e^{i 2\pi \tau_{XX}(\nu - \nu_c)} & 0 \\ 
+0 & e^{i 2\pi \tau_{YY}(\nu - \nu_c)} 
+\end{bmatrix}
+\end{equation}
+
+\subsection{TEC Effects}
+\begin{equation}
+\mathbf{T}(\nu) = \begin{bmatrix} 
+e^{i \alpha_{XX}(\nu)} & 0 \\ 
+0 & e^{i \alpha_{YY}(\nu)} 
+\end{bmatrix}
+\end{equation}
+where:
+\begin{equation}
+\alpha_{XX/YY}(\nu) = 2\pi t_{XX/YY}\left(\nu^{-1} + \frac{\log(\nu_{\min}) - \log(\nu_{\max})}{\nu_{\max} - \nu_{\min}}\right) + \theta_{XX/YY}
+\end{equation}
+
+\subsection{R/L Delay Difference}
+\begin{equation}
+\mathbf{R}(\nu) = \begin{bmatrix} 
+\cos(\Delta\theta/2) & i\sin(\Delta\theta/2) \\ 
+-i\sin(\Delta\theta/2) & \cos(\Delta\theta/2) 
+\end{bmatrix}
+\end{equation}
+where $\Delta\theta(\nu) = 2\pi \Delta\tau (\nu - \nu_c)$
+
+\subsection{Cross-hand Phase Offset}
+\begin{equation}
+\mathbf{C} = \begin{bmatrix} 1 & 0 \\ 0 & e^{i\phi} \end{bmatrix}
+\end{equation}
+
+\section{Kronecker Product Implementation}
+
+\subsection{General Form}
+\begin{equation}
+\mathbf{M} = \mathbf{J}_1 \otimes \mathbf{J}_2^* = \begin{bmatrix}
+\alpha_{11}\alpha_{11}^* & \alpha_{11}\alpha_{21}^* & \alpha_{21}\alpha_{11}^* & \alpha_{21}\alpha_{21}^* \\
+\alpha_{11}\alpha_{12}^* & \alpha_{11}\alpha_{22}^* & \alpha_{21}\alpha_{12}^* & \alpha_{21}\alpha_{22}^* \\
+\alpha_{12}\alpha_{11}^* & \alpha_{12}\alpha_{21}^* & \alpha_{22}\alpha_{11}^* & \alpha_{22}\alpha_{21}^* \\
+\alpha_{12}\alpha_{12}^* & \alpha_{12}\alpha_{22}^* & \alpha_{22}\alpha_{12}^* & \alpha_{22}\alpha_{22}^*
+\end{bmatrix}
+\end{equation}
+
+Operating on visibility vector $[V_{XX}, V_{XY}, V_{YX}, V_{YY}]^T$.
+
+\section{EVLA Memo 207 Validation Equations}
+
+\subsection{Unpolarized Source (Equations 67-70)}
+\begin{align}
+R_{vv} &= G_{v1}G_{v2}^* I(1 + T_{hv1}T_{hv2}^*)/2 \\
+R_{vh} &= G_{v1}G_{h2}^* I(T_{hv1} + T_{vh2}^*)/2 \\
+R_{hv} &= G_{h1}G_{v2}^* I(T_{vh1} + T_{hv2}^*)/2 \\
+R_{hh} &= G_{h1}G_{h2}^* I(1 + T_{vh1}T_{vh2}^*)/2
+\end{align}
+
+\subsection{Cross-hand Delay (Equations 75-76)}
+For unpolarized source with misaligned dipoles:
+\begin{align}
+R_{vh} &= I \sin(\Delta\theta)/2 \\
+R_{hv} &= -I \sin(\Delta\theta)/2
+\end{align}
+
+\subsection{Cross-hand Phase Effects (Equations 77-78)}
+\begin{align}
+R'_{vh} &= e^{-i\phi}[-Q \sin(2\Psi_p) + U \cos(2\Psi_p) + iV]/2 \\
+R'_{hv} &= e^{i\phi}[-Q \sin(2\Psi_p) + U \cos(2\Psi_p) - iV]/2
+\end{align}
+
+\section{Implementation Parameters}
+
+All matrices implemented as 2×2 complex with frequency dependence where applicable.
+
+\end{document}
