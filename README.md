@@ -1,7 +1,7 @@
 # jones_sim
 
 [![CI](https://github.com/preshanth/jones_sim/workflows/CI/badge.svg)](https://github.com/preshanth/jones_sim/actions)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Core Coverage](https://img.shields.io/badge/coverage%20(core)-97%25-brightgreen)](https://github.com/preshanth/jones_sim/actions)
 <!-- [![Full Coverage](https://img.shields.io/badge/coverage%20(full)-45%25-orange)](https://github.com/preshanth/jones_sim/actions) -->
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -42,16 +42,13 @@ pip install -e .[dev]
 
 ## Features
 
-### Core Capabilities
-- **Symbolic equation generation** - SymPy-based Jones matrix algebra
-- **Numerical simulation** - Forward modeling of Jones effects (gains, bandpass, leakage, etc.)
-- **Visibility corruption** - Apply Jones matrices to ideal visibilities
-- **Source models** - Multiple polarization scenarios (unpolarized, linear, circular, rotation measure)
-
-### Optional Features
-- **Interactive visualization** (requires `[plotting]`) - Bokeh-based dashboards for time/frequency effects
-- **Monte Carlo analysis** (requires `[mcmc]`) - Bayesian parameter estimation with PyMC
-- **CASA integration** (requires `[casa]`) - Read/write measurement sets and calibration tables
+- **Symbolic Jones matrices** - Generate Jones matrix equations using SymPy
+- **Numerical simulation** - Compute Jones effects (gains, bandpass, leakage, parallactic angle, etc.)
+- **Visibility corruption** - Apply Jones matrices to corrupt ideal visibilities
+- **Source models** - Unpolarized, linear, circular, and rotation measure sources
+- **Interactive plots** (optional) - Bokeh visualizations
+- **MCMC sampling** (optional) - PyMC-based parameter estimation
+- **CASA interface** (optional) - Read/write measurement sets and calibration tables
 
 ## Quick Start
 

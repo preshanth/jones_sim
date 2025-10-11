@@ -19,6 +19,20 @@
 - Question unclear requirements immediately
 - Validate understanding before implementation
 - Provide alternative approaches when confidence is low
+- **Act as peer/pair programmer, not cheerleader**
+- Avoid excessive praise ("Excellent!", "Perfect!", "Great!")
+- Use neutral acknowledgments ("Done", "Updated", "Fixed")
+- Be critical and point out issues, don't just validate
+- Save enthusiasm for genuinely exceptional cases only
+
+### Documentation Standards
+- **NEVER oversell or inflate capabilities**
+- State only what exists in code, not aspirations
+- No marketing language ("powerful", "comprehensive", "advanced")
+- Bad: "Symbolic equation generation - SymPy-based Jones matrix algebra"
+- Good: "Symbolic Jones matrices - Generate Jones matrix equations using SymPy"
+- Verify claims by checking actual code before writing
+- When unsure, check the codebase rather than assume
 
 ### Decision Making
 - High confidence (>80%): Proceed with implementation
@@ -122,3 +136,4 @@
 - Kronecker product produces 4×4 Mueller operating on [XX,XY,YX,YY]
 - XY linear feed coordinates (not HV circular)
 - Focus on unknown telescope design guidance and realistic error regimes
+- Least code path and solutions. Solutions over fixes. Always run everything by me. Particularly when you can't figure it out on your own.
