@@ -1,16 +1,15 @@
 """Test individual Jones matrix effect classes."""
 
 import numpy as np
-import pytest
 
 from jones_sim.effects import (
-    ParallacticAngle,
+    BandpassDelay,
+    CrosshandPhase,
     ElectronicGains,
     InstrumentalLeakage,
-    BandpassDelay,
+    ParallacticAngle,
     RLDelayDifference,
     RotationMeasure,
-    CrosshandPhase
 )
 
 
@@ -24,16 +23,15 @@ class TestParallacticAngle:
 
         matrix = effect.jones_matrix(1e9, 0.0, 0)
 
-        expected = np.array([
-            [np.cos(psi), np.sin(psi)],
-            [-np.sin(psi), np.cos(psi)]
-        ], dtype=complex)
+        expected = np.array(
+            [[np.cos(psi), np.sin(psi)], [-np.sin(psi), np.cos(psi)]], dtype=complex
+        )
 
         np.testing.assert_allclose(matrix, expected)
 
     def test_array_angles(self):
         """Test with array of angles per antenna."""
-        angles = np.array([0, np.pi/2, np.pi])
+        angles = np.array([0, np.pi / 2, np.pi])
         effect = ParallacticAngle(angles)
 
         # Test antenna 1 (90 degrees)
@@ -44,6 +42,7 @@ class TestParallacticAngle:
 
     def test_callable_angle(self):
         """Test with callable angle function."""
+
         def angle_func(time, ant_id):
             return time * ant_id * np.pi / 180  # Simple function
 
@@ -51,10 +50,13 @@ class TestParallacticAngle:
         matrix = effect.jones_matrix(1e9, 30.0, 2)  # 60 degrees
 
         expected_angle = 60 * np.pi / 180
-        expected = np.array([
-            [np.cos(expected_angle), np.sin(expected_angle)],
-            [-np.sin(expected_angle), np.cos(expected_angle)]
-        ], dtype=complex)
+        expected = np.array(
+            [
+                [np.cos(expected_angle), np.sin(expected_angle)],
+                [-np.sin(expected_angle), np.cos(expected_angle)],
+            ],
+            dtype=complex,
+        )
 
         np.testing.assert_allclose(matrix, expected)
 
@@ -75,12 +77,12 @@ class TestElectronicGains:
 
     def test_array_gains(self):
         """Test with array of gains per antenna."""
-        g_xx = np.array([1+0j, 2+0.5j, 0.8-0.2j])
-        g_yy = np.array([1+0j, 1.5-0.3j, 1.2+0.1j])
+        g_xx = np.array([1 + 0j, 2 + 0.5j, 0.8 - 0.2j])
+        g_yy = np.array([1 + 0j, 1.5 - 0.3j, 1.2 + 0.1j])
         effect = ElectronicGains(g_xx, g_yy)
 
         matrix = effect.jones_matrix(1e9, 0.0, 2)
-        expected = np.array([[0.8-0.2j, 0], [0, 1.2+0.1j]], dtype=complex)
+        expected = np.array([[0.8 - 0.2j, 0], [0, 1.2 + 0.1j]], dtype=complex)
 
         np.testing.assert_allclose(matrix, expected)
 
@@ -89,7 +91,7 @@ class TestElectronicGains:
         effect = ElectronicGains(2.0, 1.5)
 
         matrix = effect.jones_matrix(1e9, 0.0, 0)
-        expected = np.array([[2.0+0j, 0], [0, 1.5+0j]], dtype=complex)
+        expected = np.array([[2.0 + 0j, 0], [0, 1.5 + 0j]], dtype=complex)
 
         np.testing.assert_allclose(matrix, expected)
 
@@ -114,10 +116,7 @@ class TestInstrumentalLeakage:
         effect = InstrumentalLeakage(d_hv=0.0, d_vh=0.0, theta=theta)
 
         matrix = effect.jones_matrix(1e9, 0.0, 0)
-        expected = np.array([
-            [1, np.tan(theta)],
-            [-np.tan(theta), 1]
-        ], dtype=complex)
+        expected = np.array([[1, np.tan(theta)], [-np.tan(theta), 1]], dtype=complex)
 
         np.testing.assert_allclose(matrix, expected)
 
@@ -155,18 +154,15 @@ class TestBandpassDelay:
     def test_frequency_dependence(self):
         """Test frequency-dependent phase."""
         tau_xx = 1e-9  # 1 ns
-        tau_yy = 0.0   # No delay
+        tau_yy = 0.0  # No delay
         ref_freq = 1e9
-        freq = 1.1e9   # 100 MHz offset
+        freq = 1.1e9  # 100 MHz offset
         effect = BandpassDelay(tau_xx, tau_yy, ref_freq)
 
         matrix = effect.jones_matrix(freq, 0.0, 0)
 
         expected_phase = 2j * np.pi * tau_xx * (freq - ref_freq)
-        expected = np.array([
-            [np.exp(expected_phase), 0],
-            [0, 1]
-        ], dtype=complex)
+        expected = np.array([[np.exp(expected_phase), 0], [0, 1]], dtype=complex)
 
         np.testing.assert_allclose(matrix, expected)
 
@@ -198,10 +194,9 @@ class TestRLDelayDifference:
         cos_half = np.cos(delta_theta / 2)
         sin_half = np.sin(delta_theta / 2)
 
-        expected = np.array([
-            [cos_half, 1j * sin_half],
-            [-1j * sin_half, cos_half]
-        ], dtype=complex)
+        expected = np.array(
+            [[cos_half, 1j * sin_half], [-1j * sin_half, cos_half]], dtype=complex
+        )
 
         np.testing.assert_allclose(matrix, expected)
 
@@ -244,10 +239,13 @@ class TestRotationMeasure:
         lambda_sq = (c / freq) ** 2
         expected_angle = rm_value * lambda_sq
 
-        expected = np.array([
-            [np.cos(expected_angle), -np.sin(expected_angle)],
-            [np.sin(expected_angle), np.cos(expected_angle)]
-        ], dtype=complex)
+        expected = np.array(
+            [
+                [np.cos(expected_angle), -np.sin(expected_angle)],
+                [np.sin(expected_angle), np.cos(expected_angle)],
+            ],
+            dtype=complex,
+        )
 
         np.testing.assert_allclose(matrix, expected, rtol=1e-12)
 
@@ -292,10 +290,13 @@ class TestRotationMeasure:
         # Also verify the matrices match expected rotation matrices
         for freq, expected_angle in zip(freqs, expected_angles):
             matrix = effect.jones_matrix(freq, 0.0, 0)
-            expected_matrix = np.array([
-                [np.cos(expected_angle), -np.sin(expected_angle)],
-                [np.sin(expected_angle), np.cos(expected_angle)]
-            ], dtype=complex)
+            expected_matrix = np.array(
+                [
+                    [np.cos(expected_angle), -np.sin(expected_angle)],
+                    [np.sin(expected_angle), np.cos(expected_angle)],
+                ],
+                dtype=complex,
+            )
             np.testing.assert_allclose(matrix, expected_matrix, rtol=1e-12)
 
     def test_array_rm_values(self):
@@ -312,10 +313,13 @@ class TestRotationMeasure:
         c = 299792458.0
         lambda_sq = (c / 1e9) ** 2
         expected_angle_1 = 10.0 * lambda_sq
-        expected_1 = np.array([
-            [np.cos(expected_angle_1), -np.sin(expected_angle_1)],
-            [np.sin(expected_angle_1), np.cos(expected_angle_1)]
-        ], dtype=complex)
+        expected_1 = np.array(
+            [
+                [np.cos(expected_angle_1), -np.sin(expected_angle_1)],
+                [np.sin(expected_angle_1), np.cos(expected_angle_1)],
+            ],
+            dtype=complex,
+        )
         np.testing.assert_allclose(matrix_1, expected_1, rtol=1e-12)
 
 
@@ -337,16 +341,13 @@ class TestCrosshandPhase:
         effect = CrosshandPhase(phi)
 
         matrix = effect.jones_matrix(1e9, 0.0, 0)
-        expected = np.array([
-            [1, 0],
-            [0, np.exp(1j * phi)]
-        ], dtype=complex)
+        expected = np.array([[1, 0], [0, np.exp(1j * phi)]], dtype=complex)
 
         np.testing.assert_allclose(matrix, expected)
 
     def test_array_phases(self):
         """Test with array of phases per antenna."""
-        phases = np.array([0, np.pi/2, np.pi])
+        phases = np.array([0, np.pi / 2, np.pi])
         effect = CrosshandPhase(phases)
 
         matrix = effect.jones_matrix(1e9, 0.0, 2)  # Antenna 2: π phase

@@ -4,9 +4,10 @@ This module provides classes for different polarization states and handles
 conversion from Stokes parameters to linear correlation format [XX, XY, YX, YY].
 """
 
-import numpy as np
-from typing import Union, Tuple
 from abc import ABC, abstractmethod
+from typing import Tuple
+
+import numpy as np
 
 
 class SourceModel(ABC):
@@ -67,10 +68,9 @@ class UnpolarizedSource(SourceModel):
 class LinearPolarizedSource(SourceModel):
     """Linearly polarized point source."""
 
-    def __init__(self,
-                 flux_density: float,
-                 polarization_fraction: float,
-                 position_angle: float):
+    def __init__(
+        self, flux_density: float, polarization_fraction: float, position_angle: float
+    ):
         """Initialize linearly polarized source.
 
         Args:
@@ -114,12 +114,14 @@ class RMSource(SourceModel):
     Propagation RM should be handled via the RotationMeasure Jones matrix.
     """
 
-    def __init__(self,
-                 flux_density: float,
-                 polarization_fraction: float,
-                 intrinsic_position_angle: float,
-                 rotation_measure: float,
-                 frequency: float):
+    def __init__(
+        self,
+        flux_density: float,
+        polarization_fraction: float,
+        intrinsic_position_angle: float,
+        rotation_measure: float,
+        frequency: float,
+    ):
         """Initialize RM-affected linearly polarized source.
 
         Args:
@@ -169,12 +171,14 @@ class RMSource(SourceModel):
 class CircularPolarizedSource(SourceModel):
     """Circularly polarized source with optional linear component."""
 
-    def __init__(self,
-                 flux_density: float,
-                 circular_fraction: float,
-                 linear_fraction: float = 0.0,
-                 position_angle: float = 0.0,
-                 handedness: str = 'right'):
+    def __init__(
+        self,
+        flux_density: float,
+        circular_fraction: float,
+        linear_fraction: float = 0.0,
+        position_angle: float = 0.0,
+        handedness: str = "right",
+    ):
         """Initialize circularly polarized source.
 
         Args:
@@ -196,7 +200,7 @@ class CircularPolarizedSource(SourceModel):
             raise ValueError("Linear polarization fraction must be between 0 and 1")
         if circular_fraction + linear_fraction > 1:
             raise ValueError("Total polarization fraction cannot exceed 1")
-        if handedness not in ['right', 'left']:
+        if handedness not in ["right", "left"]:
             raise ValueError("Handedness must be 'right' or 'left'")
 
     def stokes_parameters(self) -> Tuple[float, float, float, float]:
@@ -210,7 +214,7 @@ class CircularPolarizedSource(SourceModel):
 
         # Circular polarization component
         circ_intensity = I * self.circ_frac
-        if self.handedness == 'right':
+        if self.handedness == "right":
             V = circ_intensity  # Right-handed (positive V)
         else:
             V = -circ_intensity  # Left-handed (negative V)
@@ -225,47 +229,44 @@ class CircularPolarizedSource(SourceModel):
 
 # Convenience functions for common source configurations
 
+
 def create_unpolarized_source(flux_jy: float = 1.0) -> UnpolarizedSource:
     """Create standard unpolarized calibrator source."""
     return UnpolarizedSource(flux_jy)
 
 
-def create_linear_source(flux_jy: float = 1.0,
-                        pol_percent: float = 5.0,
-                        pa_degrees: float = 30.0) -> LinearPolarizedSource:
+def create_linear_source(
+    flux_jy: float = 1.0, pol_percent: float = 5.0, pa_degrees: float = 30.0
+) -> LinearPolarizedSource:
     """Create linearly polarized source with percentage and degrees."""
-    return LinearPolarizedSource(
-        flux_jy,
-        pol_percent / 100.0,
-        np.radians(pa_degrees)
-    )
+    return LinearPolarizedSource(flux_jy, pol_percent / 100.0, np.radians(pa_degrees))
 
 
-def create_rm_source(flux_jy: float = 1.0,
-                    pol_percent: float = 5.0,
-                    pa_degrees: float = 30.0,
-                    rm_rad_per_m2: float = 25.0,
-                    freq_hz: float = 1e9) -> RMSource:
+def create_rm_source(
+    flux_jy: float = 1.0,
+    pol_percent: float = 5.0,
+    pa_degrees: float = 30.0,
+    rm_rad_per_m2: float = 25.0,
+    freq_hz: float = 1e9,
+) -> RMSource:
     """Create RM-affected linearly polarized source."""
     return RMSource(
-        flux_jy,
-        pol_percent / 100.0,
-        np.radians(pa_degrees),
-        rm_rad_per_m2,
-        freq_hz
+        flux_jy, pol_percent / 100.0, np.radians(pa_degrees), rm_rad_per_m2, freq_hz
     )
 
 
-def create_circular_source(flux_jy: float = 1.0,
-                          circ_percent: float = 10.0,
-                          lin_percent: float = 2.0,
-                          pa_degrees: float = 0.0,
-                          handedness: str = 'right') -> CircularPolarizedSource:
+def create_circular_source(
+    flux_jy: float = 1.0,
+    circ_percent: float = 10.0,
+    lin_percent: float = 2.0,
+    pa_degrees: float = 0.0,
+    handedness: str = "right",
+) -> CircularPolarizedSource:
     """Create circularly polarized source with small linear component."""
     return CircularPolarizedSource(
         flux_jy,
         circ_percent / 100.0,
         lin_percent / 100.0,
         np.radians(pa_degrees),
-        handedness
+        handedness,
     )

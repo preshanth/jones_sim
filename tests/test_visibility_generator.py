@@ -3,14 +3,23 @@
 import numpy as np
 import pytest
 
-from jones_sim.visibility_generator import VisibilityGenerator, quick_unpolarized_sim, quick_polarized_sim
+from jones_sim.effects import (
+    ElectronicGains,
+    InstrumentalLeakage,
+    ParallacticAngle,
+    RotationMeasure,
+)
 from jones_sim.source_models import (
-    create_unpolarized_source,
+    create_circular_source,
     create_linear_source,
     create_rm_source,
-    create_circular_source
+    create_unpolarized_source,
 )
-from jones_sim.effects import ElectronicGains, ParallacticAngle, RotationMeasure, InstrumentalLeakage
+from jones_sim.visibility_generator import (
+    VisibilityGenerator,
+    quick_polarized_sim,
+    quick_unpolarized_sim,
+)
 
 
 class TestVisibilityGenerator:
@@ -18,7 +27,9 @@ class TestVisibilityGenerator:
 
     def setup_method(self):
         """Setup for each test."""
-        self.generator = VisibilityGenerator(n_antennas=3, noise_std=0.1, random_seed=42)
+        self.generator = VisibilityGenerator(
+            n_antennas=3, noise_std=0.1, random_seed=42
+        )
 
         # Test parameters
         self.frequencies = np.array([1e9, 1.5e9, 2e9])  # 1-2 GHz
@@ -26,8 +37,10 @@ class TestVisibilityGenerator:
 
     def test_baseline_data_generation(self):
         """Test baseline coordinate generation."""
-        freq_grid, time_grid, ant1_ids, ant2_ids = self.generator.generate_baseline_data(
-            self.frequencies, self.times, exclude_autocorr=True
+        freq_grid, time_grid, ant1_ids, ant2_ids = (
+            self.generator.generate_baseline_data(
+                self.frequencies, self.times, exclude_autocorr=True
+            )
         )
 
         n_baselines = 3 * 2  # 3 antennas, exclude autocorr = 6 baselines
@@ -51,8 +64,10 @@ class TestVisibilityGenerator:
 
     def test_baseline_data_with_autocorr(self):
         """Test baseline generation including autocorrelations."""
-        freq_grid, time_grid, ant1_ids, ant2_ids = self.generator.generate_baseline_data(
-            self.frequencies, self.times, exclude_autocorr=False
+        freq_grid, time_grid, ant1_ids, ant2_ids = (
+            self.generator.generate_baseline_data(
+                self.frequencies, self.times, exclude_autocorr=False
+            )
         )
 
         n_baselines = 3 * 3  # 3x3 = 9 baselines including autocorr
@@ -120,7 +135,7 @@ class TestVisibilityGenerator:
         """Test Case 1: Unpolarized source corruption."""
         # Add simple gain effect
         gains = ElectronicGains(2.0, 1.5)  # Different XX, YY gains
-        self.generator.add_jones_effect('gains', gains)
+        self.generator.add_jones_effect("gains", gains)
 
         # Create unpolarized source
         source = create_unpolarized_source(1.0)
@@ -131,12 +146,12 @@ class TestVisibilityGenerator:
         )
 
         # Verify result structure
-        assert 'visibilities' in result
-        assert 'ideal_visibilities' in result
-        assert 'frequencies' in result
+        assert "visibilities" in result
+        assert "ideal_visibilities" in result
+        assert "frequencies" in result
 
-        vis = result['visibilities']
-        ideal = result['ideal_visibilities']
+        vis = result["visibilities"]
+        ideal = result["ideal_visibilities"]
 
         # Check that corruption occurred (not identical to ideal)
         assert not np.allclose(vis, ideal)
@@ -144,7 +159,7 @@ class TestVisibilityGenerator:
         # For unpolarized source with diagonal gains:
         # Ideal: [1, 0, 0, 1], Corrupted: [g1*g1*, 0, 0, g2*g2*] = [4, 0, 0, 2.25]
         # Check one baseline (antenna 0-1)
-        baseline_mask = (result['antenna1'] == 0) & (result['antenna2'] == 1)
+        baseline_mask = (result["antenna1"] == 0) & (result["antenna2"] == 1)
         baseline_vis = vis[baseline_mask][0]  # First time/freq point
 
         expected_xx = 2.0 * 2.0  # g_xx * g_xx*
@@ -154,7 +169,7 @@ class TestVisibilityGenerator:
         np.testing.assert_allclose(baseline_vis[0].real, expected_xx, rtol=0.1)  # XX
         np.testing.assert_allclose(baseline_vis[3].real, expected_yy, rtol=0.1)  # YY
 
-        print(f"Case 1 - Unpolarized corruption test passed")
+        print("Case 1 - Unpolarized corruption test passed")
         print(f"Expected XX: {expected_xx}, Measured: {baseline_vis[0]}")
         print(f"Expected YY: {expected_yy}, Measured: {baseline_vis[3]}")
 
@@ -162,7 +177,7 @@ class TestVisibilityGenerator:
         """Test Case 2: 5% linear polarization at 30° PA."""
         # Add leakage effect to see cross-polarization
         leakage = InstrumentalLeakage(d_hv=0.02, d_vh=0.03)
-        self.generator.add_jones_effect('leakage', leakage)
+        self.generator.add_jones_effect("leakage", leakage)
 
         # Create 5% linearly polarized source at 30°
         source = create_linear_source(1.0, 5.0, 30.0)
@@ -171,8 +186,8 @@ class TestVisibilityGenerator:
             source, self.frequencies, self.times, add_noise=True
         )
 
-        vis = result['visibilities']
-        ideal = result['ideal_visibilities']
+        vis = result["visibilities"]
+        ideal = result["ideal_visibilities"]
 
         # Check that corruption occurred
         assert not np.allclose(vis, ideal)
@@ -185,7 +200,7 @@ class TestVisibilityGenerator:
         assert np.any(np.abs(xy_correlations) > 1e-10)
         assert np.any(np.abs(yx_correlations) > 1e-10)
 
-        print(f"Case 2 - Linear polarization test passed")
+        print("Case 2 - Linear polarization test passed")
         print(f"Max |XY|: {np.max(np.abs(xy_correlations)):.6f}")
         print(f"Max |YX|: {np.max(np.abs(yx_correlations)):.6f}")
 
@@ -193,7 +208,7 @@ class TestVisibilityGenerator:
         """Test Case 3: RM = 25 rad/m² effect."""
         # Add rotation measure effect
         rm_effect = RotationMeasure(25.0)
-        self.generator.add_jones_effect('rotation_measure', rm_effect)
+        self.generator.add_jones_effect("rotation_measure", rm_effect)
 
         # Create RM source (linearly polarized with intrinsic RM)
         source = create_rm_source(1.0, 5.0, 30.0, 25.0, 1e9)
@@ -202,8 +217,8 @@ class TestVisibilityGenerator:
             source, self.frequencies, self.times, add_noise=True
         )
 
-        vis = result['visibilities']
-        freqs = result['frequencies']
+        vis = result["visibilities"]
+        freqs = result["frequencies"]
 
         # RM effect should be frequency dependent
         # Group by frequency and check that rotation varies
@@ -216,7 +231,7 @@ class TestVisibilityGenerator:
 
             # Average over baselines/times for this frequency
             avg_xy = np.mean(freq_vis[:, 1])  # XY
-            avg_yx = np.mean(freq_vis[:, 2])  # YX
+            np.mean(freq_vis[:, 2])  # YX
 
             # Extract rotation from XY phase (rough approximation)
             if np.abs(avg_xy) > 1e-10:
@@ -228,24 +243,24 @@ class TestVisibilityGenerator:
             rotation_range = np.max(rotations) - np.min(rotations)
             assert rotation_range > 1e-6  # Should see frequency-dependent rotation
 
-        print(f"Case 3 - Rotation measure test passed")
+        print("Case 3 - Rotation measure test passed")
         print(f"Rotation range across frequencies: {rotation_range:.6f} rad")
 
     def test_case4_circular_polarization(self):
         """Test Case 4: 10% circular + 2% linear polarization."""
         # Add parallactic angle rotation to see circular effects
-        parallactic = ParallacticAngle(np.pi/6)  # 30° parallactic angle
-        self.generator.add_jones_effect('parallactic', parallactic)
+        parallactic = ParallacticAngle(np.pi / 6)  # 30° parallactic angle
+        self.generator.add_jones_effect("parallactic", parallactic)
 
         # Create circularly polarized source with small linear component
-        source = create_circular_source(1.0, 10.0, 2.0, 0.0, 'right')
+        source = create_circular_source(1.0, 10.0, 2.0, 0.0, "right")
 
         result = self.generator.generate_visibilities(
             source, self.frequencies, self.times, add_noise=True
         )
 
-        vis = result['visibilities']
-        ideal = result['ideal_visibilities']
+        result["visibilities"]
+        ideal = result["ideal_visibilities"]
 
         # Check Stokes V creates correlations
         I, Q, U, V = source.stokes_parameters()
@@ -262,7 +277,7 @@ class TestVisibilityGenerator:
         np.testing.assert_allclose(ideal_xy, expected_xy, rtol=1e-10)
         np.testing.assert_allclose(ideal_yx, expected_yx, rtol=1e-10)
 
-        print(f"Case 4 - Circular polarization test passed")
+        print("Case 4 - Circular polarization test passed")
         print(f"Stokes V: {V:.4f}")
         print(f"Ideal XY: {ideal_xy}")
         print(f"Ideal YX: {ideal_yx}")
@@ -273,8 +288,8 @@ class TestVisibilityGenerator:
         gains = ElectronicGains(1.2, 0.8)
         leakage = InstrumentalLeakage(d_hv=0.01, d_vh=0.02)
 
-        self.generator.add_jones_effect('gains', gains)
-        self.generator.add_jones_effect('leakage', leakage)
+        self.generator.add_jones_effect("gains", gains)
+        self.generator.add_jones_effect("leakage", leakage)
 
         source = create_linear_source(1.0, 3.0, 45.0)
 
@@ -284,19 +299,19 @@ class TestVisibilityGenerator:
         )
 
         # Verify all expected keys exist
-        assert 'baseline' in comparison
-        assert 'all_effects' in comparison
-        assert 'gains' in comparison
-        assert 'leakage' in comparison
+        assert "baseline" in comparison
+        assert "all_effects" in comparison
+        assert "gains" in comparison
+        assert "leakage" in comparison
 
         # Baseline should be ideal (no corruption)
-        baseline_vis = comparison['baseline']['visibilities']
-        ideal_vis = comparison['baseline']['ideal_visibilities']
+        baseline_vis = comparison["baseline"]["visibilities"]
+        ideal_vis = comparison["baseline"]["ideal_visibilities"]
         np.testing.assert_allclose(baseline_vis, ideal_vis)
 
         # Individual effects should differ from baseline
-        gains_vis = comparison['gains']['visibilities']
-        leakage_vis = comparison['leakage']['visibilities']
+        gains_vis = comparison["gains"]["visibilities"]
+        leakage_vis = comparison["leakage"]["visibilities"]
 
         assert not np.allclose(gains_vis, ideal_vis)
         assert not np.allclose(leakage_vis, ideal_vis)
@@ -306,26 +321,26 @@ class TestVisibilityGenerator:
     def test_corruption_summary(self):
         """Test corruption summary generation."""
         gains = ElectronicGains(1.5, 1.2)
-        self.generator.add_jones_effect('gains', gains)
+        self.generator.add_jones_effect("gains", gains)
 
         source = create_unpolarized_source(2.0)
 
         summary = self.generator.get_corruption_summary(source, 1.5e9, 30.0)
 
         # Check summary structure
-        assert 'stokes_parameters' in summary
-        assert 'ideal_correlations' in summary
-        assert 'jones_matrices' in summary
+        assert "stokes_parameters" in summary
+        assert "ideal_correlations" in summary
+        assert "jones_matrices" in summary
 
         # Check Stokes parameters
-        stokes = summary['stokes_parameters']
+        stokes = summary["stokes_parameters"]
         expected_stokes = np.array([2.0, 0.0, 0.0, 0.0])
         np.testing.assert_allclose(stokes, expected_stokes)
 
         # Check Jones matrices for each antenna
         for ant_id in range(self.generator.n_antennas):
-            assert f'antenna_{ant_id}' in summary['jones_matrices']
-            jones_matrix = summary['jones_matrices'][f'antenna_{ant_id}']
+            assert f"antenna_{ant_id}" in summary["jones_matrices"]
+            jones_matrix = summary["jones_matrices"][f"antenna_{ant_id}"]
             assert jones_matrix.shape == (2, 2)
 
         print("Corruption summary test passed")
@@ -339,18 +354,18 @@ class TestConvenienceFunctions:
         frequencies = np.array([1e9, 2e9])
         times = np.array([0.0, 60.0])
 
-        jones_effects = {
-            'gains': ElectronicGains(1.1, 0.9)
-        }
+        jones_effects = {"gains": ElectronicGains(1.1, 0.9)}
 
-        result = quick_unpolarized_sim(frequencies, times, jones_effects, noise_std=0.05)
+        result = quick_unpolarized_sim(
+            frequencies, times, jones_effects, noise_std=0.05
+        )
 
-        assert 'visibilities' in result
-        assert 'ideal_visibilities' in result
+        assert "visibilities" in result
+        assert "ideal_visibilities" in result
 
         # Check that gains were applied
-        vis = result['visibilities']
-        ideal = result['ideal_visibilities']
+        vis = result["visibilities"]
+        ideal = result["ideal_visibilities"]
         assert not np.allclose(vis, ideal)
 
     def test_quick_polarized_sim_linear(self):
@@ -358,18 +373,20 @@ class TestConvenienceFunctions:
         frequencies = np.array([1e9])
         times = np.array([0.0])
 
-        jones_effects = {
-            'leakage': InstrumentalLeakage(d_hv=0.02)
-        }
+        jones_effects = {"leakage": InstrumentalLeakage(d_hv=0.02)}
 
         result = quick_polarized_sim(
-            frequencies, times, jones_effects,
-            pol_type='linear', pol_fraction=0.1, noise_std=0.02
+            frequencies,
+            times,
+            jones_effects,
+            pol_type="linear",
+            pol_fraction=0.1,
+            noise_std=0.02,
         )
 
-        assert 'visibilities' in result
+        assert "visibilities" in result
         # Should have cross-correlations due to leakage
-        xy_corr = result['visibilities'][:, 1]
+        xy_corr = result["visibilities"][:, 1]
         assert np.any(np.abs(xy_corr) > 1e-10)
 
     def test_quick_polarized_sim_circular(self):
@@ -377,18 +394,20 @@ class TestConvenienceFunctions:
         frequencies = np.array([1e9])
         times = np.array([0.0])
 
-        jones_effects = {
-            'parallactic': ParallacticAngle(np.pi/4)
-        }
+        jones_effects = {"parallactic": ParallacticAngle(np.pi / 4)}
 
         result = quick_polarized_sim(
-            frequencies, times, jones_effects,
-            pol_type='circular', pol_fraction=0.15, noise_std=0.01
+            frequencies,
+            times,
+            jones_effects,
+            pol_type="circular",
+            pol_fraction=0.15,
+            noise_std=0.01,
         )
 
-        assert 'visibilities' in result
+        assert "visibilities" in result
         # Circular polarization should create correlations
-        vis = result['visibilities']
+        vis = result["visibilities"]
         assert np.any(np.abs(vis) > 1e-10)
 
     def test_invalid_pol_type(self):
@@ -398,7 +417,7 @@ class TestConvenienceFunctions:
         jones_effects = {}
 
         with pytest.raises(ValueError):
-            quick_polarized_sim(frequencies, times, jones_effects, pol_type='invalid')
+            quick_polarized_sim(frequencies, times, jones_effects, pol_type="invalid")
 
 
 if __name__ == "__main__":
@@ -411,19 +430,19 @@ if __name__ == "__main__":
     times = np.array([0.0, 60.0])
 
     # Add some effects
-    generator.add_jones_effect('gains', ElectronicGains(1.2, 0.8))
-    generator.add_jones_effect('rotation_measure', RotationMeasure(10.0))
+    generator.add_jones_effect("gains", ElectronicGains(1.2, 0.8))
+    generator.add_jones_effect("rotation_measure", RotationMeasure(10.0))
 
     sources = [
         ("Unpolarized", create_unpolarized_source(1.0)),
         ("Linear 5%", create_linear_source(1.0, 5.0, 30.0)),
         ("RM affected", create_rm_source(1.0, 5.0, 30.0, 25.0, 1e9)),
-        ("Circular 10%", create_circular_source(1.0, 10.0, 2.0))
+        ("Circular 10%", create_circular_source(1.0, 10.0, 2.0)),
     ]
 
     for name, source in sources:
         result = generator.generate_visibilities(source, freqs, times)
-        vis_rms = np.sqrt(np.mean(np.abs(result['visibilities'])**2))
+        vis_rms = np.sqrt(np.mean(np.abs(result["visibilities"]) ** 2))
         print(f"{name:12s}: RMS visibility = {vis_rms:.4f}")
 
     print("Demonstration complete!")

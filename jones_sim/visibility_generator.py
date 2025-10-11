@@ -4,12 +4,12 @@ This module provides the main interface for generating corrupted visibilities
 by combining source models, Jones matrix effects, and realistic noise.
 """
 
-import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
-import warnings
+from typing import Dict, List, Optional, Tuple
 
-from .source_models import SourceModel
+import numpy as np
+
 from .simulator import JonesSimulator
+from .source_models import SourceModel
 
 
 class VisibilityGenerator:
@@ -19,10 +19,12 @@ class VisibilityGenerator:
     realistic visibility datasets for calibration studies.
     """
 
-    def __init__(self,
-                 n_antennas: int = 4,
-                 noise_std: float = 0.0,
-                 random_seed: Optional[int] = None):
+    def __init__(
+        self,
+        n_antennas: int = 4,
+        noise_std: float = 0.0,
+        random_seed: Optional[int] = None,
+    ):
         """Initialize visibility generator.
 
         Args:
@@ -50,10 +52,9 @@ class VisibilityGenerator:
         """
         self.jones_simulator.add_effect(name, effect_instance)
 
-    def generate_baseline_data(self,
-                              frequencies: np.ndarray,
-                              times: np.ndarray,
-                              exclude_autocorr: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def generate_baseline_data(
+        self, frequencies: np.ndarray, times: np.ndarray, exclude_autocorr: bool = True
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate baseline coordinate arrays for all antenna pairs.
 
         Args:
@@ -75,7 +76,7 @@ class VisibilityGenerator:
         n_baselines = len(baselines)
         n_freq = len(frequencies)
         n_time = len(times)
-        n_vis = n_baselines * n_freq * n_time
+        n_baselines * n_freq * n_time
 
         # Create coordinate grids
         freq_grid = np.tile(np.repeat(frequencies, n_time), n_baselines)
@@ -94,7 +95,9 @@ class VisibilityGenerator:
 
         return freq_grid, time_grid, ant1_ids, ant2_ids
 
-    def add_noise(self, visibilities: np.ndarray, flags: Optional[np.ndarray] = None) -> np.ndarray:
+    def add_noise(
+        self, visibilities: np.ndarray, flags: Optional[np.ndarray] = None
+    ) -> np.ndarray:
         """Add Gaussian noise to visibilities, respecting flags.
 
         Uses Option B: σ_real = σ_imag = σ/√2 so total complex variance = σ².
@@ -124,13 +127,15 @@ class VisibilityGenerator:
 
         return visibilities + noise
 
-    def generate_visibilities(self,
-                             source: SourceModel,
-                             frequencies: np.ndarray,
-                             times: np.ndarray,
-                             flags: Optional[np.ndarray] = None,
-                             exclude_autocorr: bool = True,
-                             add_noise: bool = True) -> Dict[str, np.ndarray]:
+    def generate_visibilities(
+        self,
+        source: SourceModel,
+        frequencies: np.ndarray,
+        times: np.ndarray,
+        flags: Optional[np.ndarray] = None,
+        exclude_autocorr: bool = True,
+        add_noise: bool = True,
+    ) -> Dict[str, np.ndarray]:
         """Generate corrupted visibilities for a given source.
 
         Args:
@@ -171,7 +176,9 @@ class VisibilityGenerator:
         else:
             # Ensure flags match visibility array shape
             if flags.shape != (n_vis, 4):
-                raise ValueError(f"Flag array shape {flags.shape} doesn't match expected {(n_vis, 4)}")
+                raise ValueError(
+                    f"Flag array shape {flags.shape} doesn't match expected {(n_vis, 4)}"
+                )
             visibility_flags = flags.copy()
 
         # Apply Jones matrix corruption
@@ -181,23 +188,27 @@ class VisibilityGenerator:
 
         # Add noise if requested (respecting flags)
         if add_noise:
-            corrupted_visibilities = self.add_noise(corrupted_visibilities, visibility_flags)
+            corrupted_visibilities = self.add_noise(
+                corrupted_visibilities, visibility_flags
+            )
 
         return {
-            'visibilities': corrupted_visibilities,
-            'flags': visibility_flags,
-            'frequencies': freq_grid,
-            'times': time_grid,
-            'antenna1': ant1_ids,
-            'antenna2': ant2_ids,
-            'ideal_visibilities': ideal_visibilities
+            "visibilities": corrupted_visibilities,
+            "flags": visibility_flags,
+            "frequencies": freq_grid,
+            "times": time_grid,
+            "antenna1": ant1_ids,
+            "antenna2": ant2_ids,
+            "ideal_visibilities": ideal_visibilities,
         }
 
-    def compare_effects(self,
-                       source: SourceModel,
-                       frequencies: np.ndarray,
-                       times: np.ndarray,
-                       effect_names: Optional[List[str]] = None) -> Dict[str, Dict[str, np.ndarray]]:
+    def compare_effects(
+        self,
+        source: SourceModel,
+        frequencies: np.ndarray,
+        times: np.ndarray,
+        effect_names: Optional[List[str]] = None,
+    ) -> Dict[str, Dict[str, np.ndarray]]:
         """Generate visibilities with individual effects to study systematic corruption.
 
         Args:
@@ -223,7 +234,7 @@ class VisibilityGenerator:
         try:
             # Baseline: no corruption
             self.jones_simulator.clear_effects()
-            results['baseline'] = self.generate_visibilities(
+            results["baseline"] = self.generate_visibilities(
                 source, frequencies, times, add_noise=False
             )
 
@@ -231,7 +242,9 @@ class VisibilityGenerator:
             for effect_name in effect_names:
                 if effect_name in original_effects:
                     self.jones_simulator.clear_effects()
-                    self.jones_simulator.add_effect(effect_name, original_effects[effect_name])
+                    self.jones_simulator.add_effect(
+                        effect_name, original_effects[effect_name]
+                    )
                     results[effect_name] = self.generate_visibilities(
                         source, frequencies, times, add_noise=False
                     )
@@ -241,7 +254,7 @@ class VisibilityGenerator:
             for name, effect in original_effects.items():
                 self.jones_simulator.add_effect(name, effect)
 
-            results['all_effects'] = self.generate_visibilities(
+            results["all_effects"] = self.generate_visibilities(
                 source, frequencies, times, add_noise=False
             )
 
@@ -253,10 +266,9 @@ class VisibilityGenerator:
 
         return results
 
-    def get_corruption_summary(self,
-                              source: SourceModel,
-                              frequency: float = 1e9,
-                              time: float = 0.0) -> Dict[str, np.ndarray]:
+    def get_corruption_summary(
+        self, source: SourceModel, frequency: float = 1e9, time: float = 0.0
+    ) -> Dict[str, np.ndarray]:
         """Get summary of Jones matrix corruption at specific frequency/time.
 
         Args:
@@ -274,25 +286,28 @@ class VisibilityGenerator:
         # Get Jones matrices for each antenna
         jones_matrices = {}
         for ant_id in range(self.n_antennas):
-            jones_matrices[f'antenna_{ant_id}'] = self.jones_simulator.compute_jones_matrix(
-                frequency, time, ant_id
+            jones_matrices[f"antenna_{ant_id}"] = (
+                self.jones_simulator.compute_jones_matrix(frequency, time, ant_id)
             )
 
         return {
-            'stokes_parameters': np.array([I, Q, U, V]),
-            'ideal_correlations': ideal_corr,
-            'jones_matrices': jones_matrices,
-            'frequency': frequency,
-            'time': time
+            "stokes_parameters": np.array([I, Q, U, V]),
+            "ideal_correlations": ideal_corr,
+            "jones_matrices": jones_matrices,
+            "frequency": frequency,
+            "time": time,
         }
 
 
 # Convenience functions for common simulation scenarios
 
-def quick_unpolarized_sim(frequencies: np.ndarray,
-                         times: np.ndarray,
-                         jones_effects: Dict[str, object],
-                         noise_std: float = 0.01) -> Dict[str, np.ndarray]:
+
+def quick_unpolarized_sim(
+    frequencies: np.ndarray,
+    times: np.ndarray,
+    jones_effects: Dict[str, object],
+    noise_std: float = 0.01,
+) -> Dict[str, np.ndarray]:
     """Quick simulation of unpolarized source with specified Jones effects."""
     from .source_models import create_unpolarized_source
 
@@ -307,14 +322,16 @@ def quick_unpolarized_sim(frequencies: np.ndarray,
     return generator.generate_visibilities(source, frequencies, times)
 
 
-def quick_polarized_sim(frequencies: np.ndarray,
-                       times: np.ndarray,
-                       jones_effects: Dict[str, object],
-                       pol_type: str = 'linear',
-                       pol_fraction: float = 0.05,
-                       noise_std: float = 0.01) -> Dict[str, np.ndarray]:
+def quick_polarized_sim(
+    frequencies: np.ndarray,
+    times: np.ndarray,
+    jones_effects: Dict[str, object],
+    pol_type: str = "linear",
+    pol_fraction: float = 0.05,
+    noise_std: float = 0.01,
+) -> Dict[str, np.ndarray]:
     """Quick simulation of polarized source with specified Jones effects."""
-    from .source_models import create_linear_source, create_circular_source
+    from .source_models import create_circular_source, create_linear_source
 
     generator = VisibilityGenerator(noise_std=noise_std)
 
@@ -323,9 +340,9 @@ def quick_polarized_sim(frequencies: np.ndarray,
         generator.add_jones_effect(name, effect)
 
     # Create source
-    if pol_type == 'linear':
+    if pol_type == "linear":
         source = create_linear_source(1.0, pol_fraction * 100, 30.0)
-    elif pol_type == 'circular':
+    elif pol_type == "circular":
         source = create_circular_source(1.0, pol_fraction * 100, 2.0)
     else:
         raise ValueError("pol_type must be 'linear' or 'circular'")

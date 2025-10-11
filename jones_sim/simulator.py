@@ -1,7 +1,8 @@
 """Simple Jones matrix simulator coordinator."""
 
+from typing import Any, Dict, List
+
 import numpy as np
-from typing import List, Dict, Optional, Any
 
 
 class JonesSimulator:
@@ -13,13 +14,13 @@ class JonesSimulator:
     def __init__(self):
         self.effects: Dict[str, Any] = {}
         self.effect_order = [
-            'parallactic',
-            'leakage',
-            'gains',
-            'bandpass',
-            'rotation_measure',
-            'rl_delay',
-            'crosshand_phase'
+            "parallactic",
+            "leakage",
+            "gains",
+            "bandpass",
+            "rotation_measure",
+            "rl_delay",
+            "crosshand_phase",
         ]
 
     def add_effect(self, name: str, effect_instance):
@@ -31,7 +32,9 @@ class JonesSimulator:
         """
         self.effects[name] = effect_instance
 
-    def compute_jones_matrix(self, freq: float, time: float, antenna_id: int) -> np.ndarray:
+    def compute_jones_matrix(
+        self, freq: float, time: float, antenna_id: int
+    ) -> np.ndarray:
         """Compute total Jones matrix by multiplying effects in order.
 
         Args:
@@ -46,17 +49,21 @@ class JonesSimulator:
 
         for effect_name in self.effect_order:
             if effect_name in self.effects:
-                effect_matrix = self.effects[effect_name].jones_matrix(freq, time, antenna_id)
+                effect_matrix = self.effects[effect_name].jones_matrix(
+                    freq, time, antenna_id
+                )
                 result = result @ effect_matrix
 
         return result
 
-    def corrupt_visibilities(self,
-                           ideal_visibilities: np.ndarray,
-                           frequencies: np.ndarray,
-                           times: np.ndarray,
-                           antenna1_ids: np.ndarray,
-                           antenna2_ids: np.ndarray) -> np.ndarray:
+    def corrupt_visibilities(
+        self,
+        ideal_visibilities: np.ndarray,
+        frequencies: np.ndarray,
+        times: np.ndarray,
+        antenna1_ids: np.ndarray,
+        antenna2_ids: np.ndarray,
+    ) -> np.ndarray:
         """Apply Jones corruption to ideal visibilities.
 
         Args:

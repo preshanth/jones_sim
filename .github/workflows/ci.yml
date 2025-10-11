@@ -17,12 +17,12 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache pip packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -33,7 +33,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -e .[dev]
-        pip install pytest-cov pytest-xdist
 
     - name: Run linting
       run: |
@@ -44,6 +43,7 @@ jobs:
     - name: Run core tests with coverage
       run: |
         pytest tests/ \
+          -n auto \
           -m "not slow and not end_to_end and not requires_casa" \
           --cov=jones_sim \
           --cov-report=xml \
@@ -56,13 +56,14 @@ jobs:
       if: matrix.python-version == '3.11'  # Only run on one version to save time
       run: |
         pytest tests/ \
+          -n auto \
           -m "not end_to_end and not requires_casa" \
           --maxfail=3 \
           -v
 
     - name: Upload coverage to Codecov
       if: matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         flags: unittests
@@ -70,7 +71,7 @@ jobs:
         fail_ci_if_error: false
 
     - name: Upload coverage reports as artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: matrix.python-version == '3.11'
       with:
         name: coverage-reports
@@ -84,33 +85,22 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
     - name: Install linting tools
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 black isort mypy
+        pip install black ruff
 
     - name: Check code formatting with black
       run: |
         black --check --diff jones_sim/ tests/
 
-    - name: Check import sorting with isort
+    - name: Lint with ruff
       run: |
-        isort --check-only --diff jones_sim/ tests/
-
-    - name: Lint with flake8
-      run: |
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 jones_sim/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings. Line length set to 88 (black default)
-        flake8 jones_sim/ --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
-
-    - name: Type checking with mypy (optional)
-      run: |
-        mypy jones_sim/ --ignore-missing-imports || true
+        ruff check jones_sim/ tests/
 
   package:
     runs-on: ubuntu-latest
@@ -119,7 +109,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
@@ -137,7 +127,7 @@ jobs:
         twine check dist/*
 
     - name: Upload package artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: python-package
         path: dist/
@@ -150,7 +140,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 

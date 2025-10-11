@@ -4,12 +4,14 @@ This module provides classes for integrating jones_sim with real interferometric
 using casatools and casatasks. Handles visibility data, flags, and calibration solutions.
 """
 
-import numpy as np
-from typing import Dict, List, Optional, Tuple, Union, Any
 import warnings
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
 
 try:
     import casatools
+
     CASA_AVAILABLE = True
 except ImportError:
     CASA_AVAILABLE = False
@@ -60,33 +62,33 @@ class MeasurementSetHandler:
             self.msmd_tool.open(self.ms_path)
 
             summary = {
-                'n_antennas': self.msmd_tool.nantennas(),
-                'antenna_names': self.msmd_tool.antennanames(),
-                'n_spw': self.msmd_tool.nspw(),
-                'field_names': self.msmd_tool.fieldnames(),
-                'source_names': self.msmd_tool.sourcenames(),
-                'scan_numbers': self.msmd_tool.scannumbers(),
-                'n_observations': self.msmd_tool.nobservations(),
-                'observatory_names': self.msmd_tool.observatorynames()
+                "n_antennas": self.msmd_tool.nantennas(),
+                "antenna_names": self.msmd_tool.antennanames(),
+                "n_spw": self.msmd_tool.nspw(),
+                "field_names": self.msmd_tool.fieldnames(),
+                "source_names": self.msmd_tool.sourcenames(),
+                "scan_numbers": self.msmd_tool.scannumbers(),
+                "n_observations": self.msmd_tool.nobservations(),
+                "observatory_names": self.msmd_tool.observatorynames(),
             }
 
             # Get frequency information for each spectral window
             freq_info = {}
-            for spw in range(summary['n_spw']):
+            for spw in range(summary["n_spw"]):
                 freq_info[spw] = {
-                    'chan_freqs': self.msmd_tool.chanfreqs(spw),
-                    'ref_freq': self.msmd_tool.reffreq(spw),
-                    'n_channels': len(self.msmd_tool.chanfreqs(spw))
+                    "chan_freqs": self.msmd_tool.chanfreqs(spw),
+                    "ref_freq": self.msmd_tool.reffreq(spw),
+                    "n_channels": len(self.msmd_tool.chanfreqs(spw)),
                 }
-            summary['frequency_info'] = freq_info
+            summary["frequency_info"] = freq_info
 
             # Get time range information
-            if summary['n_observations'] > 0:
+            if summary["n_observations"] > 0:
                 time_ranges = []
-                for obs in range(summary['n_observations']):
+                for obs in range(summary["n_observations"]):
                     time_range = self.msmd_tool.timerangeforobs(obs)
                     time_ranges.append(time_range)
-                summary['time_ranges'] = time_ranges
+                summary["time_ranges"] = time_ranges
 
             return summary
 
@@ -106,19 +108,21 @@ class MeasurementSetHandler:
             positions = np.zeros((n_ant, 3))
             for ant_id in range(n_ant):
                 pos = self.msmd_tool.antennaposition(ant_id)
-                positions[ant_id] = pos['value']
+                positions[ant_id] = pos["value"]
 
             return positions
 
         finally:
             self.msmd_tool.close()
 
-    def read_visibilities(self,
-                         field: Optional[Union[str, int, List]] = None,
-                         spw: Optional[Union[str, int, List]] = None,
-                         antenna: Optional[Union[str, int, List]] = None,
-                         time_range: Optional[str] = None,
-                         correlation: Optional[Union[str, List]] = None) -> Dict[str, np.ndarray]:
+    def read_visibilities(
+        self,
+        field: Optional[Union[str, int, List]] = None,
+        spw: Optional[Union[str, int, List]] = None,
+        antenna: Optional[Union[str, int, List]] = None,
+        time_range: Optional[str] = None,
+        correlation: Optional[Union[str, List]] = None,
+    ) -> Dict[str, np.ndarray]:
         """Read visibility data and flags from measurement set.
 
         Args:
@@ -146,25 +150,33 @@ class MeasurementSetHandler:
             # Build selection dictionary
             selection = {}
             if field is not None:
-                selection['field'] = field
+                selection["field"] = field
             if spw is not None:
-                selection['spw'] = spw
+                selection["spw"] = spw
             if antenna is not None:
-                selection['antenna'] = antenna
+                selection["antenna"] = antenna
             if time_range is not None:
-                selection['time'] = time_range
+                selection["time"] = time_range
 
             # Apply selection if any criteria specified
             if selection:
                 self.ms_tool.select(selection)
 
             # Get data items
-            data_items = ['data', 'flag', 'uvw', 'antenna1', 'antenna2', 'time',
-                         'field_id', 'scan_number']
+            data_items = [
+                "data",
+                "flag",
+                "uvw",
+                "antenna1",
+                "antenna2",
+                "time",
+                "field_id",
+                "scan_number",
+            ]
 
             if correlation is not None:
                 # Handle correlation selection
-                data_items.append('axis_info')
+                data_items.append("axis_info")
 
             data = self.ms_tool.getdata(data_items)
 
@@ -174,12 +186,12 @@ class MeasurementSetHandler:
                 if spw is not None and isinstance(spw, (int, str)):
                     # Single SPW selected
                     spw_id = int(spw) if isinstance(spw, str) else spw
-                    data['frequency'] = self.msmd_tool.chanfreqs(spw_id)
-                elif 'axis_info' in data:
+                    data["frequency"] = self.msmd_tool.chanfreqs(spw_id)
+                elif "axis_info" in data:
                     # Extract frequency from axis info
-                    freq_axis = data['axis_info']['freq_axis']
-                    if 'chan_freq' in freq_axis:
-                        data['frequency'] = freq_axis['chan_freq']['value']
+                    freq_axis = data["axis_info"]["freq_axis"]
+                    if "chan_freq" in freq_axis:
+                        data["frequency"] = freq_axis["chan_freq"]["value"]
 
             except Exception as e:
                 warnings.warn(f"Could not extract frequency information: {e}")
@@ -191,11 +203,13 @@ class MeasurementSetHandler:
             if self.msmd_tool.isopen():
                 self.msmd_tool.close()
 
-    def write_visibilities(self,
-                          modified_data: np.ndarray,
-                          flags: Optional[np.ndarray] = None,
-                          column: str = 'CORRECTED_DATA',
-                          selection: Optional[Dict] = None) -> None:
+    def write_visibilities(
+        self,
+        modified_data: np.ndarray,
+        flags: Optional[np.ndarray] = None,
+        column: str = "CORRECTED_DATA",
+        selection: Optional[Dict] = None,
+    ) -> None:
         """Write modified visibility data back to measurement set.
 
         Args:
@@ -217,19 +231,19 @@ class MeasurementSetHandler:
                     selected_table.putcol(column, modified_data)
 
                     if flags is not None:
-                        selected_table.putcol('FLAG', flags)
+                        selected_table.putcol("FLAG", flags)
 
                     selected_table.close()
                 else:
                     # No selection, write to entire table
                     self.table_tool.putcol(column, modified_data)
                     if flags is not None:
-                        self.table_tool.putcol('FLAG', flags)
+                        self.table_tool.putcol("FLAG", flags)
             else:
                 # Write to entire table
                 self.table_tool.putcol(column, modified_data)
                 if flags is not None:
-                    self.table_tool.putcol('FLAG', flags)
+                    self.table_tool.putcol("FLAG", flags)
 
         finally:
             self.table_tool.close()
@@ -245,18 +259,22 @@ class MeasurementSetHandler:
         """
         conditions = []
 
-        if 'field' in selection:
-            field = selection['field']
+        if "field" in selection:
+            field = selection["field"]
             if isinstance(field, str):
-                conditions.append(f"FIELD_ID IN (SELECT ROWID() FROM ::FIELD WHERE NAME=='{field}')")
+                conditions.append(
+                    f"FIELD_ID IN (SELECT ROWID() FROM ::FIELD WHERE NAME=='{field}')"
+                )
             else:
                 conditions.append(f"FIELD_ID=={field}")
 
-        if 'antenna' in selection:
-            antenna = selection['antenna']
+        if "antenna" in selection:
+            antenna = selection["antenna"]
             if isinstance(antenna, (list, tuple)):
-                ant_list = ','.join(map(str, antenna))
-                conditions.append(f"ANTENNA1 IN [{ant_list}] OR ANTENNA2 IN [{ant_list}]")
+                ant_list = ",".join(map(str, antenna))
+                conditions.append(
+                    f"ANTENNA1 IN [{ant_list}] OR ANTENNA2 IN [{ant_list}]"
+                )
             else:
                 conditions.append(f"ANTENNA1=={antenna} OR ANTENNA2=={antenna}")
 
@@ -276,8 +294,8 @@ class MeasurementSetHandler:
         try:
             data = self.read_visibilities()
 
-            ant1 = data['antenna1']
-            ant2 = data['antenna2']
+            ant1 = data["antenna1"]
+            ant2 = data["antenna2"]
 
             if exclude_autocorr:
                 baseline_mask = ant1 != ant2
@@ -292,10 +310,10 @@ class MeasurementSetHandler:
             n_baselines = len(baselines)
 
             return {
-                'baselines': np.array(baselines),
-                'n_antennas': n_ant,
-                'n_baselines': n_baselines,
-                'baseline_mask': baseline_mask if exclude_autocorr else None
+                "baselines": np.array(baselines),
+                "n_antennas": n_ant,
+                "n_baselines": n_baselines,
+                "baseline_mask": baseline_mask if exclude_autocorr else None,
             }
 
         except Exception as e:
@@ -314,15 +332,17 @@ class MeasurementSetHandler:
             print(f"  Sources: {obs_summary['source_names']}")
             print(f"  Spectral Windows: {obs_summary['n_spw']}")
 
-            for spw, freq_info in obs_summary['frequency_info'].items():
-                n_chan = freq_info['n_channels']
-                freq_range = freq_info['chan_freqs']
+            for spw, freq_info in obs_summary["frequency_info"].items():
+                n_chan = freq_info["n_channels"]
+                freq_range = freq_info["chan_freqs"]
                 if len(freq_range) > 0:
                     freq_min = freq_range[0] / 1e9  # Convert to GHz
                     freq_max = freq_range[-1] / 1e9
-                    print(f"    SPW {spw}: {n_chan} channels, {freq_min:.3f}-{freq_max:.3f} GHz")
+                    print(
+                        f"    SPW {spw}: {n_chan} channels, {freq_min:.3f}-{freq_max:.3f} GHz"
+                    )
 
-            if 'time_ranges' in obs_summary:
+            if "time_ranges" in obs_summary:
                 print(f"  Time ranges: {len(obs_summary['time_ranges'])} observations")
 
         except Exception as e:
@@ -331,13 +351,13 @@ class MeasurementSetHandler:
     def close(self):
         """Close all CASA tools."""
         try:
-            if hasattr(self, 'ms_tool'):
+            if hasattr(self, "ms_tool"):
                 self.ms_tool.close()
-            if hasattr(self, 'msmd_tool'):
+            if hasattr(self, "msmd_tool"):
                 self.msmd_tool.close()
-            if hasattr(self, 'table_tool'):
+            if hasattr(self, "table_tool"):
                 self.table_tool.close()
-        except:
+        except Exception:
             pass
 
 
@@ -361,7 +381,9 @@ class CalibrationTableHandler:
         self.table_tool = casatools.table()
         self.calibrater_tool = casatools.calibrater()
 
-    def read_gain_solutions(self, cal_path: Optional[str] = None) -> Dict[str, np.ndarray]:
+    def read_gain_solutions(
+        self, cal_path: Optional[str] = None
+    ) -> Dict[str, np.ndarray]:
         """Read gain solutions from calibration table.
 
         Args:
@@ -378,20 +400,20 @@ class CalibrationTableHandler:
             self.table_tool.open(table_path)
 
             # Read main calibration data columns
-            gains = self.table_tool.getcol('GAIN')  # Complex gains
-            flags = self.table_tool.getcol('FLAG')  # Gain flags
-            times = self.table_tool.getcol('TIME')  # Time stamps
-            antennas = self.table_tool.getcol('ANTENNA1')  # Antenna IDs
+            gains = self.table_tool.getcol("GAIN")  # Complex gains
+            flags = self.table_tool.getcol("FLAG")  # Gain flags
+            times = self.table_tool.getcol("TIME")  # Time stamps
+            antennas = self.table_tool.getcol("ANTENNA1")  # Antenna IDs
 
             # Try to read additional columns
             try:
-                spw_ids = self.table_tool.getcol('SPECTRAL_WINDOW_ID')
-            except:
+                spw_ids = self.table_tool.getcol("SPECTRAL_WINDOW_ID")
+            except Exception:
                 spw_ids = np.zeros(len(times), dtype=int)
 
             try:
-                field_ids = self.table_tool.getcol('FIELD_ID')
-            except:
+                field_ids = self.table_tool.getcol("FIELD_ID")
+            except Exception:
                 field_ids = np.zeros(len(times), dtype=int)
 
             # Get unique values for organization
@@ -400,23 +422,25 @@ class CalibrationTableHandler:
             unique_spws = np.unique(spw_ids)
 
             return {
-                'gains': gains,
-                'flags': flags,
-                'times': times,
-                'antennas': antennas,
-                'spw_ids': spw_ids,
-                'field_ids': field_ids,
-                'unique_times': unique_times,
-                'unique_antennas': unique_antennas,
-                'unique_spws': unique_spws,
-                'n_pol': gains.shape[0] if len(gains.shape) > 1 else 1,
-                'n_chan': gains.shape[1] if len(gains.shape) > 2 else 1
+                "gains": gains,
+                "flags": flags,
+                "times": times,
+                "antennas": antennas,
+                "spw_ids": spw_ids,
+                "field_ids": field_ids,
+                "unique_times": unique_times,
+                "unique_antennas": unique_antennas,
+                "unique_spws": unique_spws,
+                "n_pol": gains.shape[0] if len(gains.shape) > 1 else 1,
+                "n_chan": gains.shape[1] if len(gains.shape) > 2 else 1,
             }
 
         finally:
             self.table_tool.close()
 
-    def read_bandpass_solutions(self, cal_path: Optional[str] = None) -> Dict[str, np.ndarray]:
+    def read_bandpass_solutions(
+        self, cal_path: Optional[str] = None
+    ) -> Dict[str, np.ndarray]:
         """Read bandpass solutions from calibration table.
 
         Args:
@@ -428,13 +452,15 @@ class CalibrationTableHandler:
         # Similar structure to gain solutions but with frequency dependence
         return self.read_gain_solutions(cal_path)
 
-    def write_synthetic_caltable(self,
-                                jones_effects: Dict[str, Any],
-                                output_path: str,
-                                times: np.ndarray,
-                                antennas: np.ndarray,
-                                frequencies: Optional[np.ndarray] = None,
-                                cal_type: str = 'G') -> None:
+    def write_synthetic_caltable(
+        self,
+        jones_effects: Dict[str, Any],
+        output_path: str,
+        times: np.ndarray,
+        antennas: np.ndarray,
+        frequencies: Optional[np.ndarray] = None,
+        cal_type: str = "G",
+    ) -> None:
         """Write synthetic calibration table from jones_sim effects.
 
         Args:
@@ -474,16 +500,20 @@ class CalibrationTableHandler:
             print(f"  Channels: {solutions['n_chan']}")
 
             # Show gain statistics
-            gains = solutions['gains']
-            flags = solutions['flags']
+            gains = solutions["gains"]
+            flags = solutions["flags"]
 
             unflagged_gains = gains[~flags]
             if len(unflagged_gains) > 0:
                 amp_stats = np.abs(unflagged_gains)
                 phase_stats = np.angle(unflagged_gains)
 
-                print(f"  Gain amplitudes: {np.mean(amp_stats):.3f} ± {np.std(amp_stats):.3f}")
-                print(f"  Gain phases: {np.mean(phase_stats):.3f} ± {np.std(phase_stats):.3f} rad")
+                print(
+                    f"  Gain amplitudes: {np.mean(amp_stats):.3f} ± {np.std(amp_stats):.3f}"
+                )
+                print(
+                    f"  Gain phases: {np.mean(phase_stats):.3f} ± {np.std(phase_stats):.3f} rad"
+                )
                 print(f"  Flagged fraction: {np.sum(flags) / flags.size:.1%}")
 
         except Exception as e:
@@ -492,15 +522,16 @@ class CalibrationTableHandler:
     def close(self):
         """Close all CASA tools."""
         try:
-            if hasattr(self, 'table_tool'):
+            if hasattr(self, "table_tool"):
                 self.table_tool.close()
-            if hasattr(self, 'calibrater_tool'):
+            if hasattr(self, "calibrater_tool"):
                 self.calibrater_tool.close()
-        except:
+        except Exception:
             pass
 
 
 # Convenience functions for quick MS/cal table operations
+
 
 def quick_ms_summary(ms_path: str) -> None:
     """Quickly print measurement set summary."""

@@ -4,15 +4,15 @@ import numpy as np
 import pytest
 
 from jones_sim.source_models import (
-    UnpolarizedSource,
+    CircularPolarizedSource,
     LinearPolarizedSource,
     RMSource,
-    CircularPolarizedSource,
-    stokes_to_linear,
-    create_unpolarized_source,
+    UnpolarizedSource,
+    create_circular_source,
     create_linear_source,
     create_rm_source,
-    create_circular_source
+    create_unpolarized_source,
+    stokes_to_linear,
 )
 
 
@@ -191,7 +191,7 @@ class TestCircularPolarizedSource:
         circ_frac = 0.2
 
         # Right-handed
-        source_rcp = CircularPolarizedSource(flux, circ_frac, 0.0, 0.0, 'right')
+        source_rcp = CircularPolarizedSource(flux, circ_frac, 0.0, 0.0, "right")
         I, Q, U, V = source_rcp.stokes_parameters()
 
         assert I == flux
@@ -200,7 +200,7 @@ class TestCircularPolarizedSource:
         assert V == circ_frac * flux
 
         # Left-handed
-        source_lcp = CircularPolarizedSource(flux, circ_frac, 0.0, 0.0, 'left')
+        source_lcp = CircularPolarizedSource(flux, circ_frac, 0.0, 0.0, "left")
         I, Q, U, V = source_lcp.stokes_parameters()
 
         assert I == flux
@@ -215,7 +215,7 @@ class TestCircularPolarizedSource:
         lin_frac = 0.05
         pa = np.pi / 4  # 45 degrees
 
-        source = CircularPolarizedSource(flux, circ_frac, lin_frac, pa, 'right')
+        source = CircularPolarizedSource(flux, circ_frac, lin_frac, pa, "right")
         I, Q, U, V = source.stokes_parameters()
 
         assert I == flux
@@ -247,7 +247,7 @@ class TestCircularPolarizedSource:
 
         # Invalid handedness
         with pytest.raises(ValueError):
-            CircularPolarizedSource(1.0, 0.1, 0.0, 0.0, 'invalid')
+            CircularPolarizedSource(1.0, 0.1, 0.0, 0.0, "invalid")
 
 
 class TestConvenienceFunctions:
@@ -291,7 +291,7 @@ class TestConvenienceFunctions:
 
     def test_create_circular_source(self):
         """Test circular source creation."""
-        source = create_circular_source(1.0, 15.0, 3.0, 0.0, 'left')
+        source = create_circular_source(1.0, 15.0, 3.0, 0.0, "left")
 
         I, Q, U, V = source.stokes_parameters()
         assert I == 1.0
