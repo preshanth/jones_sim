@@ -1,15 +1,14 @@
 # jones_sim
 
 [![CI](https://github.com/preshanth/jones_sim/workflows/CI/badge.svg)](https://github.com/preshanth/jones_sim/actions)
+[![codecov](https://codecov.io/gh/preshanth/jones_sim/branch/main/graph/badge.svg)](https://codecov.io/gh/preshanth/jones_sim)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Core Coverage](https://img.shields.io/badge/coverage%20(core)-97%25-brightgreen)](https://github.com/preshanth/jones_sim/actions)
-<!-- [![Full Coverage](https://img.shields.io/badge/coverage%20(full)-45%25-orange)](https://github.com/preshanth/jones_sim/actions) -->
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 Forward modeling of radio interferometric visibilities using Jones matrix formalism.
 
-> **Coverage Note**: Core coverage (97%) measures simulation/effects modules tested on every commit. Full coverage (45%) includes MCMC/plotting code tested in slow integration tests.
+> **Coverage Note**: Coverage metric reflects fast tests only (core simulation/effects code). MCMC/plotting code tested separately in slow integration tests.
 
 ## Installation
 
