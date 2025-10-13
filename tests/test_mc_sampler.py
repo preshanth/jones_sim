@@ -150,7 +150,10 @@ class TestGainMCSampler:
             f"YY phase range: {np.degrees(np.angle(gains_yy)).min():.1f} - {np.degrees(np.angle(gains_yy)).max():.1f} deg"
         )
 
-    @pytest.mark.xfail(reason="MCMC sampling produces variable results due to stochastic nature", strict=False)
+    @pytest.mark.xfail(
+        reason="MCMC sampling produces variable results due to stochastic nature",
+        strict=False,
+    )
     def test_gain_model_parameters(self):
         """Test that model parameters are physically reasonable."""
         sampler = GainMCSampler(n_antennas=2, n_times=10)
