@@ -67,7 +67,7 @@ J = sim.compute_jones_matrix(freq=1.4e9, time=0.0, antenna_id=0)
 ## Documentation
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide and local testing
-- [CLAUDE.md](CLAUDE.md) - Project architecture and implementation details
+- [docs/](docs/) - API documentation, testing strategy, and algorithm details
 
 ## Testing
 

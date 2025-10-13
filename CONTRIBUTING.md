@@ -208,5 +208,5 @@ pre-commit clean
 ## Getting Help
 
 - Check existing tests for examples
-- Review CLAUDE.md for project context and architecture
+- Review docs/ directory for API and algorithm documentation
 - Open an issue for bugs or feature requests
