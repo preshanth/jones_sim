@@ -441,12 +441,12 @@ class TestAntSolEdgeCases:
     def test_single_antenna_fails(self):
         """Test that single antenna configuration is rejected."""
         with pytest.raises(ValueError, match="at least 2 antennas"):
-            solver = AntSolSolver(1, mode="phase")
+            AntSolSolver(1, mode="phase")
 
     def test_invalid_mode(self):
         """Test that invalid mode raises error."""
         with pytest.raises(ValueError, match="mode must be"):
-            solver = AntSolSolver(4, mode="invalid")
+            AntSolSolver(4, mode="invalid")
 
     def test_invalid_polarization(self):
         """Test that invalid polarization raises error."""

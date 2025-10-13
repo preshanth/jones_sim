@@ -3,31 +3,30 @@
 __version__ = "0.1.0"
 
 # Core simulation components
-from .simulator import JonesSimulator
+# Calibration solver
+from .antsol import AntSolSolver, solve_gains_from_ms
 from .effects import (
-    ParallacticAngle,
+    BandpassDelay,
+    CrosshandPhase,
     ElectronicGains,
     InstrumentalLeakage,
-    BandpassDelay,
+    ParallacticAngle,
     RLDelayDifference,
-    CrosshandPhase,
     RotationMeasure,
 )
+from .simulator import JonesSimulator
 from .source_models import (
     SourceModel,
-    create_unpolarized_source,
-    create_linear_source,
     create_circular_source,
+    create_linear_source,
     create_rm_source,
+    create_unpolarized_source,
 )
 from .visibility_generator import VisibilityGenerator
 
-# Calibration solver
-from .antsol import AntSolSolver, solve_gains_from_ms
-
 # MS calibration (requires CASA)
 try:
-    from .ms_calibration import MSCalibrator, quick_gaincal
+    from .ms_calibration import MSCalibrator, quick_gaincal  # noqa: F401
 
     MS_CALIBRATION_AVAILABLE = True
 except ImportError:
@@ -35,11 +34,11 @@ except ImportError:
 
 # CASA interface (optional, requires casatools)
 try:
-    from .casa_interface import (
-        MeasurementSetHandler,
+    from .casa_interface import (  # noqa: F401
         CalibrationTableHandler,
-        quick_ms_summary,
+        MeasurementSetHandler,
         quick_cal_summary,
+        quick_ms_summary,
     )
 
     CASA_AVAILABLE = True

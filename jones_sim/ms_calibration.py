@@ -123,9 +123,9 @@ class MSCalibrator:
             from .antsol import CUPY_AVAILABLE
 
             if CUPY_AVAILABLE:
-                print(f"  Using GPU acceleration (CuPy)")
+                print("  Using GPU acceleration (CuPy)")
             else:
-                print(f"  GPU requested but CuPy not available, using CPU")
+                print("  GPU requested but CuPy not available, using CPU")
 
         for i, (correlations, weights, time_stamp) in enumerate(corr_blocks):
             solutions["times"][i] = time_stamp
@@ -451,7 +451,7 @@ class MSCalibrator:
         )
 
         print(f"  Saved solutions to {output_file} (numpy format)")
-        print(f"  TODO: Convert to CASA table format for use with applycal")
+        print("  TODO: Convert to CASA table format for use with applycal")
 
     def compare_to_casa_caltable(
         self, our_solutions: Dict, casa_caltable: str
@@ -485,24 +485,13 @@ class MSCalibrator:
 
         print(f"Matched {len(matched_indices)}/{len(our_times)} time samples")
 
-        # Extract matched solutions
-        phase_diffs_xx = []
-        phase_diffs_yy = []
-        amp_diffs_xx = []
-        amp_diffs_yy = []
-
-        for our_idx, casa_idx in matched_indices:
-            # CASA gains shape: [n_pol, n_chan, n_time_ant]
-            # Need to reshape/index appropriately
-            # This depends on CASA table structure
-
-            our_g_xx = our_solutions["gains_xx"][our_idx]
-            our_g_yy = our_solutions["gains_yy"][our_idx]
-
-            # TODO: Extract corresponding CASA gains
-            # This requires understanding CASA table indexing
-            # Placeholder for now
-            pass
+        # TODO: Implement comparison logic
+        # Need to:
+        # 1. Extract our gains at matched indices
+        # 2. Extract CASA gains from calibration table (shape: [n_pol, n_chan, n_time_ant])
+        # 3. Compute phase and amplitude differences
+        # 4. Calculate RMS statistics
+        # This requires understanding CASA table indexing structure
 
         return {
             "n_matched": len(matched_indices),
