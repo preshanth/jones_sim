@@ -125,10 +125,13 @@ class MeasurementSetHandler:
     ) -> Dict[str, np.ndarray]:
         """Read visibility data and flags from measurement set.
 
+        Uses CASA's ms.msselect() method with high-level MSSelection syntax.
+        This is the same selection syntax used in tasks like gaincal, split, etc.
+
         Args:
-            field: Field selection (name, ID, or list)
-            spw: Spectral window selection
-            antenna: Antenna selection
+            field: Field selection (name, ID, or list; e.g., 0, '0,1,9', 'J1820-2528')
+            spw: Spectral window selection (e.g., '0:27~36', '0,1,2')
+            antenna: Antenna selection (e.g., 'ea21', '0~25')
             time_range: Time range string (CASA format)
             correlation: Correlation selection
 
@@ -136,6 +139,7 @@ class MeasurementSetHandler:
             Dictionary containing:
                 - 'data': Complex visibility array [n_corr, n_chan, n_row]
                 - 'flag': Boolean flag array [n_corr, n_chan, n_row]
+                - 'weight': Weight array [n_corr, n_row] or [n_row]
                 - 'uvw': UVW coordinates [3, n_row] in meters
                 - 'antenna1': First antenna indices [n_row]
                 - 'antenna2': Second antenna indices [n_row]
@@ -147,25 +151,27 @@ class MeasurementSetHandler:
         try:
             self.ms_tool.open(self.ms_path)
 
-            # Build selection dictionary
+            # Build selection dictionary for msselect (high-level MSSelection syntax)
             selection = {}
             if field is not None:
-                selection["field"] = field
+                selection["field"] = str(field) if not isinstance(field, str) else field
             if spw is not None:
-                selection["spw"] = spw
+                selection["spw"] = str(spw) if not isinstance(spw, str) else spw
             if antenna is not None:
-                selection["antenna"] = antenna
+                selection["baseline"] = str(antenna) if not isinstance(antenna, str) else antenna
             if time_range is not None:
                 selection["time"] = time_range
 
             # Apply selection if any criteria specified
+            # Use msselect (not select) for high-level MSSelection syntax
             if selection:
-                self.ms_tool.select(selection)
+                self.ms_tool.msselect(selection)
 
             # Get data items
             data_items = [
                 "data",
                 "flag",
+                "weight",
                 "uvw",
                 "antenna1",
                 "antenna2",
@@ -200,8 +206,10 @@ class MeasurementSetHandler:
 
         finally:
             self.ms_tool.close()
-            if self.msmd_tool.isopen():
+            try:
                 self.msmd_tool.close()
+            except Exception:
+                pass  # Already closed
 
     def write_visibilities(
         self,
