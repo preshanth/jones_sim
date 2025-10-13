@@ -183,3 +183,6 @@ figures/
 
 # Profiling
 *.prof
+
+# Internal collaboration docs
+CLAUDE.md
