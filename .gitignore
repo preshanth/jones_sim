@@ -173,6 +173,7 @@ tmp_*
 data/
 *.fits
 *.uvfits
+*.npz
 
 # Output files
 output/
