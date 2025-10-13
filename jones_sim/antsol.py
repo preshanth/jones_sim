@@ -206,6 +206,10 @@ class AntSolSolver:
             raise ValueError(
                 f"refant must be in [0, {self.n_antennas-1}], got {refant}"
             )
+        if pol not in ["XX", "XY", "YX", "YY"]:
+            raise ValueError(
+                f"pol must be one of ['XX', 'XY', 'YX', 'YY'], got '{pol}'"
+            )
 
     def _initialize_gains_vectorized(self, correlations, weights):
         """Initialize gains from weighted average - VECTORIZED."""
