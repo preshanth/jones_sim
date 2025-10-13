@@ -158,7 +158,9 @@ class MeasurementSetHandler:
             if spw is not None:
                 selection["spw"] = str(spw) if not isinstance(spw, str) else spw
             if antenna is not None:
-                selection["baseline"] = str(antenna) if not isinstance(antenna, str) else antenna
+                selection["baseline"] = (
+                    str(antenna) if not isinstance(antenna, str) else antenna
+                )
             if time_range is not None:
                 selection["time"] = time_range
 

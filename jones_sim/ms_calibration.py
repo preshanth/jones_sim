@@ -115,10 +115,13 @@ class MSCalibrator:
         }
 
         # Solve per time interval (use GPU if requested)
-        solver = AntSolSolver(n_ant, mode=solver_mode, solve_leakage=False, use_gpu=self.use_gpu)
+        solver = AntSolSolver(
+            n_ant, mode=solver_mode, solve_leakage=False, use_gpu=self.use_gpu
+        )
 
         if self.use_gpu:
             from .antsol import CUPY_AVAILABLE
+
             if CUPY_AVAILABLE:
                 print(f"  Using GPU acceleration (CuPy)")
             else:
@@ -131,19 +134,27 @@ class MSCalibrator:
 
             # Debug first interval
             if i == 0:
-                corr_rms = np.sqrt(np.mean(np.abs(correlations[0])**2))
+                corr_rms = np.sqrt(np.mean(np.abs(correlations[0]) ** 2))
                 weight_stats = weights[weights > 0]
                 n_nonzero_corr = np.sum(np.abs(correlations[0]) > 0)
 
                 # Check Hermitian property: C[i,j] should equal conj(C[j,i])
-                is_hermitian = np.allclose(correlations[0], correlations[0].conj().T, rtol=1e-5)
+                is_hermitian = np.allclose(
+                    correlations[0], correlations[0].conj().T, rtol=1e-5
+                )
 
                 # Check a few off-diagonal elements
                 sample_vals = [correlations[0, 0, 1], correlations[0, 1, 0]]
 
-                print(f"    DEBUG: corr_rms={corr_rms:.2e}, n_nonzero={n_nonzero_corr}/{26*26}")
-                print(f"    DEBUG: hermitian={is_hermitian}, C[0,1]={sample_vals[0]:.3f}, C[1,0]={sample_vals[1]:.3f}")
-                print(f"    DEBUG: weights: {weight_stats.min():.1f}-{weight_stats.max():.1f} (mean={weight_stats.mean():.1f}), n_valid={len(weight_stats)}")
+                print(
+                    f"    DEBUG: corr_rms={corr_rms:.2e}, n_nonzero={n_nonzero_corr}/{26*26}"
+                )
+                print(
+                    f"    DEBUG: hermitian={is_hermitian}, C[0,1]={sample_vals[0]:.3f}, C[1,0]={sample_vals[1]:.3f}"
+                )
+                print(
+                    f"    DEBUG: weights: {weight_stats.min():.1f}-{weight_stats.max():.1f} (mean={weight_stats.mean():.1f}), n_valid={len(weight_stats)}"
+                )
 
             # Solve XX
             try:
@@ -155,8 +166,10 @@ class MSCalibrator:
 
                 # Print convergence info
                 conv_status = "✓" if info_xx["converged"] else "✗"
-                print(f"    XX: {conv_status} {info_xx['iterations']} iter, "
-                      f"residual {info_xx['initial_residual']:.2e} → {info_xx['final_residual']:.2e}")
+                print(
+                    f"    XX: {conv_status} {info_xx['iterations']} iter, "
+                    f"residual {info_xx['initial_residual']:.2e} → {info_xx['final_residual']:.2e}"
+                )
 
                 # Flag if didn't converge
                 if not info_xx["converged"]:
@@ -176,8 +189,10 @@ class MSCalibrator:
 
                 # Print convergence info
                 conv_status = "✓" if info_yy["converged"] else "✗"
-                print(f"    YY: {conv_status} {info_yy['iterations']} iter, "
-                      f"residual {info_yy['initial_residual']:.2e} → {info_yy['final_residual']:.2e}")
+                print(
+                    f"    YY: {conv_status} {info_yy['iterations']} iter, "
+                    f"residual {info_yy['initial_residual']:.2e} → {info_yy['final_residual']:.2e}"
+                )
 
                 if not info_yy["converged"]:
                     solutions["flags"][i, :, 1] = True

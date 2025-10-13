@@ -12,6 +12,7 @@ import numpy as np
 
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -76,7 +77,7 @@ class AntSolSolver:
         init_leakage: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, Optional[np.ndarray], Dict]:
         """Solve for antenna gains from correlation matrix."""
-        
+
         # Validate inputs
         self._validate_inputs(correlations, weights, refant, pol)
 
@@ -109,7 +110,9 @@ class AntSolSolver:
             if init_leakage is not None:
                 leakage = self.xp.asarray(init_leakage)
             else:
-                leakage = self._initialize_leakage_vectorized(corr_matrix, wt_matrix, gains)
+                leakage = self._initialize_leakage_vectorized(
+                    corr_matrix, wt_matrix, gains
+                )
         else:
             leakage = self.xp.zeros(self.n_antennas, dtype=complex)
 
@@ -119,21 +122,27 @@ class AntSolSolver:
             leakage = self._apply_mode_constraint_vectorized(leakage)
 
         # Compute initial residual
-        initial_residual = self._compute_residual_vectorized(corr_matrix, wt_matrix, gains, leakage)
+        initial_residual = self._compute_residual_vectorized(
+            corr_matrix, wt_matrix, gains, leakage
+        )
         prev_residual = initial_residual
         residual_history = [initial_residual]
 
         # Iterative refinement - FULLY VECTORIZED
         converged = False
         iteration = 0
-        
+
         for iteration in range(self.max_iter):
             # Update gains (vectorized)
-            gains = self._update_gains_vectorized(corr_matrix, wt_matrix, gains, leakage)
+            gains = self._update_gains_vectorized(
+                corr_matrix, wt_matrix, gains, leakage
+            )
 
             # Update leakage if needed
             if self.solve_leakage:
-                leakage = self._update_leakage_vectorized(corr_matrix, wt_matrix, gains, leakage)
+                leakage = self._update_leakage_vectorized(
+                    corr_matrix, wt_matrix, gains, leakage
+                )
 
             # Apply mode constraints
             gains = self._apply_mode_constraint_vectorized(gains)
@@ -141,7 +150,9 @@ class AntSolSolver:
                 leakage = self._apply_mode_constraint_vectorized(leakage)
 
             # Compute new residual
-            new_residual = self._compute_residual_vectorized(corr_matrix, wt_matrix, gains, leakage)
+            new_residual = self._compute_residual_vectorized(
+                corr_matrix, wt_matrix, gains, leakage
+            )
             residual_history.append(new_residual)
 
             # Check convergence
@@ -150,7 +161,7 @@ class AntSolSolver:
                 if rel_change <= self.eps:
                     converged = True
                     break
-            
+
             prev_residual = new_residual
 
         # Apply reference antenna constraint
@@ -199,41 +210,41 @@ class AntSolSolver:
         """Initialize gains from weighted average - VECTORIZED."""
         # Sum weights over j for each i: [n_ant]
         antwt = self.xp.sum(weights, axis=1)
-        
+
         # Weighted sum of correlations: [n_ant]
         weighted_sum = self.xp.sum(correlations * weights, axis=1)
-        
+
         # gains[i] = sum_j(X[i,j]*w[i,j]) / sum_j(w[i,j])
         gains = self.xp.zeros(self.n_antennas, dtype=complex)
         mask = antwt > 0
         gains[mask] = weighted_sum[mask] / antwt[mask]
-        
+
         return gains
 
     def _initialize_leakage_vectorized(self, correlations, weights, gains):
         """Initialize leakage from residuals - VECTORIZED."""
         # Model visibility: g[i] * conj(g[j]) for all i,j
         model = gains[:, None] * self.xp.conj(gains[None, :])
-        
+
         # Residual after removing gains
         residual = correlations - model
-        
+
         # Zero out diagonal (i==j)
         self.xp.fill_diagonal(residual, 0)
-        
+
         # Weighted average of residuals
         antwt = self.xp.sum(weights, axis=1)
         weighted_sum = self.xp.sum(residual * weights, axis=1)
-        
+
         leakage = self.xp.zeros(self.n_antennas, dtype=complex)
         mask = antwt > 0
         leakage[mask] = weighted_sum[mask] / antwt[mask]
-        
+
         return leakage
 
     def _update_gains_vectorized(self, correlations, weights, gains, leakage):
         """Update gains - FULLY VECTORIZED for GPU.
-        
+
         Implements: g_i = Σ_j≠i [X_ij * g_j * w_ij] / Σ_j≠i [|g_j|² * w_ij]
         """
         # Numerator: Σ_j [X[i,j] * g[j] * w[i,j]] for all i
@@ -241,20 +252,20 @@ class AntSolSolver:
         numerator = self.xp.sum(
             correlations * weights * gains[None, :], axis=1
         )  # [n_ant]
-        
+
         # Subtract diagonal contribution (j==i term)
         diag_corr = self.xp.diag(correlations)
         diag_wt = self.xp.diag(weights)
         numerator -= diag_corr * gains * diag_wt
-        
+
         # Denominator: Σ_j [|g[j]|² * w[i,j]] for all i
         denominator = self.xp.sum(
-            weights * (self.xp.abs(gains)[None, :]**2), axis=1
+            weights * (self.xp.abs(gains)[None, :] ** 2), axis=1
         )  # [n_ant]
-        
+
         # Subtract diagonal contribution
-        denominator -= (self.xp.abs(gains)**2) * diag_wt
-        
+        denominator -= (self.xp.abs(gains) ** 2) * diag_wt
+
         # Leakage correction if solving for it
         if self.solve_leakage:
             # Correction term: d[i] * Σ_j≠i [conj(d[j]) * g[j] * w[i,j]]
@@ -264,34 +275,31 @@ class AntSolSolver:
             gtop -= diag_wt * self.xp.conj(leakage) * gains
             gtop *= leakage
             numerator -= gtop
-        
+
         # Update with relaxation: g_new = (1-λ)*g + λ*(num/denom)
         gains_new = gains.copy()
         mask = denominator > 0
-        gains_new[mask] = (
-            (1.0 - self.gain_step) * gains[mask] + 
-            self.gain_step * numerator[mask] / denominator[mask]
-        )
-        
+        gains_new[mask] = (1.0 - self.gain_step) * gains[
+            mask
+        ] + self.gain_step * numerator[mask] / denominator[mask]
+
         return gains_new
 
     def _update_leakage_vectorized(self, correlations, weights, gains, leakage):
         """Update leakage - FULLY VECTORIZED for GPU."""
         # Numerator: Σ_j≠i [X[i,j] * d[j] * w[i,j]]
-        numerator = self.xp.sum(
-            correlations * weights * leakage[None, :], axis=1
-        )
-        
+        numerator = self.xp.sum(correlations * weights * leakage[None, :], axis=1)
+
         diag_corr = self.xp.diag(correlations)
         diag_wt = self.xp.diag(weights)
         numerator -= diag_corr * leakage * diag_wt
-        
+
         # Denominator: Σ_j≠i [|d[j]|² * w[i,j]]
         denominator = self.xp.sum(
-            weights * (self.xp.abs(leakage)[None, :]**2), axis=1
+            weights * (self.xp.abs(leakage)[None, :] ** 2), axis=1
         )
-        denominator -= (self.xp.abs(leakage)**2) * diag_wt
-        
+        denominator -= (self.xp.abs(leakage) ** 2) * diag_wt
+
         # Gain correction: g[i] * Σ_j≠i [conj(g[j]) * d[j] * w[i,j]]
         gtop = self.xp.sum(
             weights * self.xp.conj(gains)[None, :] * leakage[None, :], axis=1
@@ -299,15 +307,14 @@ class AntSolSolver:
         gtop -= diag_wt * self.xp.conj(gains) * leakage
         gtop *= gains
         numerator -= gtop
-        
+
         # Update with relaxation
         leakage_new = leakage.copy()
         mask = denominator > 0
-        leakage_new[mask] = (
-            (1.0 - self.gain_step) * leakage[mask] + 
-            self.gain_step * numerator[mask] / denominator[mask]
-        )
-        
+        leakage_new[mask] = (1.0 - self.gain_step) * leakage[
+            mask
+        ] + self.gain_step * numerator[mask] / denominator[mask]
+
         return leakage_new
 
     def _apply_mode_constraint_vectorized(self, gains):
@@ -315,10 +322,10 @@ class AntSolSolver:
         if self._mode_int == 0:  # Phase-only
             mask = self.xp.abs(gains) > 0
             gains[mask] = gains[mask] / self.xp.abs(gains[mask])
-        
+
         elif self._mode_int == 1:  # Amplitude-only
             gains = self.xp.abs(gains) + 0j
-        
+
         return gains
 
     def _compute_residual_vectorized(self, correlations, weights, gains, leakage):
@@ -334,16 +341,16 @@ class AntSolSolver:
             if self.solve_leakage:
                 model_vis += leakage[:, None] * self.xp.conj(leakage[None, :])
             residual = correlations - model_vis
-        
+
         # Weighted sum of squared residuals
-        total_residual = self.xp.sum(self.xp.abs(residual)**2 * weights)
+        total_residual = self.xp.sum(self.xp.abs(residual) ** 2 * weights)
         total_weight = self.xp.sum(weights)
-        
+
         if total_weight > 0:
             rms_residual = self.xp.sqrt(total_residual / total_weight)
         else:
             rms_residual = 0.0
-        
+
         return float(rms_residual)
 
     def _apply_reference_antenna(self, gains, refant):
@@ -356,7 +363,7 @@ class AntSolSolver:
                 f"Reference antenna {refant} has zero gain. "
                 "Phase reference may be undefined."
             )
-        
+
         return gains
 
 
