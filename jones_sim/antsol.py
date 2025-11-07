@@ -204,7 +204,7 @@ class AntSolSolver:
             )
         if not 0 <= refant < self.n_antennas:
             raise ValueError(
-                f"refant must be in [0, {self.n_antennas-1}], got {refant}"
+                f"refant must be in [0, {self.n_antennas - 1}], got {refant}"
             )
         if pol not in ["XX", "XY", "YX", "YY"]:
             raise ValueError(

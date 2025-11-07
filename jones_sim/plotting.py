@@ -54,7 +54,7 @@ class JonesPlotter:
 
                 # Amplitude plot
                 amp_fig = figure(
-                    title=f"{title_prefix} |{element_names[i*2+j]}| Ant {antenna_id}",
+                    title=f"{title_prefix} |{element_names[i * 2 + j]}| Ant {antenna_id}",
                     x_axis_label="Frequency (Hz)",
                     y_axis_label="Time (s)",
                     width=self.width,
@@ -79,7 +79,7 @@ class JonesPlotter:
 
                 # Phase plot
                 phase_fig = figure(
-                    title=f"{title_prefix} ∠{element_names[i*2+j]} Ant {antenna_id}",
+                    title=f"{title_prefix} ∠{element_names[i * 2 + j]} Ant {antenna_id}",
                     x_axis_label="Frequency (Hz)",
                     y_axis_label="Time (s)",
                     width=self.width,
@@ -137,7 +137,7 @@ class JonesPlotter:
 
                 # Amplitude vs frequency
                 amp_fig = figure(
-                    title=f"|{element_names[i*2+j]}| vs Frequency",
+                    title=f"|{element_names[i * 2 + j]}| vs Frequency",
                     x_axis_label="Frequency (Hz)",
                     y_axis_label="Amplitude",
                     width=self.width,
@@ -151,7 +151,7 @@ class JonesPlotter:
 
                 # Phase vs frequency
                 phase_fig = figure(
-                    title=f"∠{element_names[i*2+j]} vs Frequency",
+                    title=f"∠{element_names[i * 2 + j]} vs Frequency",
                     x_axis_label="Frequency (Hz)",
                     y_axis_label="Phase (rad)",
                     width=self.width,
@@ -201,7 +201,7 @@ class JonesPlotter:
 
                 # Amplitude vs time
                 amp_fig = figure(
-                    title=f"|{element_names[i*2+j]}| vs Time",
+                    title=f"|{element_names[i * 2 + j]}| vs Time",
                     x_axis_label="Time (s)",
                     y_axis_label="Amplitude",
                     width=self.width,
@@ -213,7 +213,7 @@ class JonesPlotter:
 
                 # Phase vs time
                 phase_fig = figure(
-                    title=f"∠{element_names[i*2+j]} vs Time",
+                    title=f"∠{element_names[i * 2 + j]} vs Time",
                     x_axis_label="Time (s)",
                     y_axis_label="Phase (rad)",
                     width=self.width,

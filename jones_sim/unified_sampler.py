@@ -61,7 +61,6 @@ class JonesMCSampler:
         """
 
         with pm.Model() as model:
-
             # === ELECTRONIC GAINS (time-varying) ===
             if "gains" in self.config["effects"]:
                 gains_config = self.config["effects"]["gains"]
@@ -494,7 +493,7 @@ def main():
                     f"    Base amplitude XX: {summary.get('base_amplitude_xx_mean', 0):.3f}"
                 )
                 print(
-                    f"    Thermal timescale: {summary.get('thermal_timescale', 0)/3600:.1f} hours"
+                    f"    Thermal timescale: {summary.get('thermal_timescale', 0) / 3600:.1f} hours"
                 )
             elif effect_name == "bandpass":
                 print(
