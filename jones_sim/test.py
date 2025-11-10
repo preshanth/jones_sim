@@ -113,7 +113,7 @@ ax1.errorbar(
     label="Solved Delay (Mean ± 95% CI)",
     color="tab:blue",
 )
-ax1.plot(df["Ant"], df["CASA"], "s-", color="tab:orange", label="CASA Delay")
+ax1.scatter(df["Ant"], df["CASA"], marker="s", color="tab:orange", label="CASA Delay")
 ax1.axhline(0, color="gray", linestyle="--", linewidth=1)
 ax1.set_ylabel("Delay (ns)")
 ax1.legend()
