@@ -565,7 +565,7 @@ class JonesPlotter:
 
             if effect_name == "gains":
                 summary_html += f"<p><b>Base amplitude (XX):</b> {summary.get('base_amplitude_xx_mean', 0):.3f} ± {summary.get('base_amplitude_xx_std', 0):.3f}</p>"
-                summary_html += f"<p><b>Thermal timescale:</b> {summary.get('thermal_timescale', 0)/3600:.1f} hours</p>"
+                summary_html += f"<p><b>Thermal timescale:</b> {summary.get('thermal_timescale', 0) / 3600:.1f} hours</p>"
             elif effect_name == "bandpass":
                 summary_html += f"<p><b>Frequency range:</b> {summary.get('frequency_range_mhz', 0):.1f} MHz</p>"
                 summary_html += (
