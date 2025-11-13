@@ -130,7 +130,7 @@ class MSCalibrator:
         for i, (correlations, weights, time_stamp) in enumerate(corr_blocks):
             solutions["times"][i] = time_stamp
 
-            print(f"  Interval {i+1}/{n_intervals}: t={time_stamp:.1f}")
+            print(f"  Interval {i + 1}/{n_intervals}: t={time_stamp:.1f}")
 
             # Debug first interval
             if i == 0:
@@ -147,7 +147,7 @@ class MSCalibrator:
                 sample_vals = [correlations[0, 0, 1], correlations[0, 1, 0]]
 
                 print(
-                    f"    DEBUG: corr_rms={corr_rms:.2e}, n_nonzero={n_nonzero_corr}/{26*26}"
+                    f"    DEBUG: corr_rms={corr_rms:.2e}, n_nonzero={n_nonzero_corr}/{26 * 26}"
                 )
                 print(
                     f"    DEBUG: hermitian={is_hermitian}, C[0,1]={sample_vals[0]:.3f}, C[1,0]={sample_vals[1]:.3f}"
@@ -270,8 +270,7 @@ class MSCalibrator:
                 return i
 
         raise ValueError(
-            f"Reference antenna '{refant}' not found in MS. "
-            f"Available: {antenna_names}"
+            f"Reference antenna '{refant}' not found in MS. Available: {antenna_names}"
         )
 
     def _extract_correlation_blocks(
