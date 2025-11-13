@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Apply delays to entire MS - chunked processing (read/corrupt/write per chunk)."""
 
-import numpy as np
-from typing import Optional, Callable, Dict
 import sys
+from typing import Callable, Dict, Optional
 
+import numpy as np
 from casa_interface import MeasurementSetHandler
-from simulator import JonesSimulator
 from effects import BandpassDelay
+from simulator import JonesSimulator
 
 
 def corrupt_ms_with_delays(
@@ -55,7 +55,7 @@ def corrupt_ms_with_delays(
     n_fields = len(summary["field_names"])
 
     print(f"\n{'=' * 70}")
-    print(f"MS METADATA")
+    print("MS METADATA")
     print(f"{'=' * 70}")
     print(f"Antennas: {n_antennas}")
     print(f"Spectral Windows: {n_spw}")
@@ -71,7 +71,7 @@ def corrupt_ms_with_delays(
         )
 
     print(f"\n{'=' * 70}")
-    print(f"BUILDING SPW FREQUENCY MAP")
+    print("BUILDING SPW FREQUENCY MAP")
     print(f"{'=' * 70}")
 
     spw_map: Dict = {}
@@ -85,14 +85,14 @@ def corrupt_ms_with_delays(
     print(f"✓ Built map for {n_spw} SPWs")
 
     print(f"\n{'=' * 70}")
-    print(f"GENERATING ANTENNA DELAYS")
+    print("GENERATING ANTENNA DELAYS")
     print(f"{'=' * 70}")
 
     delay_range_sec = delay_range_ns * 1e-9
 
     if delay_func is not None:
         antenna_delays = np.array([delay_func(ant_id) for ant_id in range(n_antennas)])
-        print(f"Using custom delay function")
+        print("Using custom delay function")
     else:
         antenna_delays = np.random.uniform(
             -delay_range_sec, delay_range_sec, n_antennas
@@ -107,7 +107,7 @@ def corrupt_ms_with_delays(
         print(f"  Antenna {ant_id}: {delay_ns:8.3f} ns")
 
     print(f"\n{'=' * 70}")
-    print(f"CREATING JONES SIMULATOR")
+    print("CREATING JONES SIMULATOR")
     print(f"{'=' * 70}")
 
     delay_effect = BandpassDelay(
@@ -117,13 +117,13 @@ def corrupt_ms_with_delays(
 
     jones_sim = JonesSimulator()
     jones_sim.add_effect("delays", delay_effect)
-    print(f"✓ BandpassDelay effect created")
+    print("✓ BandpassDelay effect created")
 
     if use_gpu:
-        print(f"✓ GPU ACCELERATION ENABLED")
+        print("✓ GPU ACCELERATION ENABLED")
 
     print(f"\n{'=' * 70}")
-    print(f"DETERMINING MS SIZE")
+    print("DETERMINING MS SIZE")
     print(f"{'=' * 70}")
 
     try:
@@ -156,7 +156,7 @@ def corrupt_ms_with_delays(
         )
         print(f"{'─' * 70}")
 
-        print(f"  Reading chunk...", end="", flush=True)
+        print("  Reading chunk...", end="", flush=True)
 
         try:
             table_tool = casatools.table()
@@ -185,7 +185,7 @@ def corrupt_ms_with_delays(
             print(f" Error: {e}")
             continue
 
-        print(f"  Reshaping for corruption...", end="", flush=True)
+        print("  Reshaping for corruption...", end="", flush=True)
 
         ideal_visibilities_list = []
         frequencies_expanded_list = []
@@ -215,7 +215,7 @@ def corrupt_ms_with_delays(
         n_vis_total += n_vis_chunk
         print(f" Done ({n_vis_chunk:,} visibilities)")
 
-        print(f"  Corrupting...", end="", flush=True)
+        print("  Corrupting...", end="", flush=True)
 
         corrupted_visibilities = jones_sim.corrupt_visibilities(
             ideal_visibilities,
@@ -227,9 +227,9 @@ def corrupt_ms_with_delays(
             batch_gpu_size=batch_gpu_size,
         )
 
-        print(f" Done")
+        print(" Done")
 
-        print(f"  Reshaping back...", end="", flush=True)
+        print("  Reshaping back...", end="", flush=True)
 
         corrupted_data = np.zeros_like(data_chunk)
         vis_idx = 0
@@ -244,9 +244,9 @@ def corrupt_ms_with_delays(
                 ]
                 vis_idx += 1
 
-        print(f" Done")
+        print(" Done")
 
-        print(f"  Writing chunk...", end="", flush=True)
+        print("  Writing chunk...", end="", flush=True)
 
         try:
             table_tool = casatools.table()
@@ -255,26 +255,26 @@ def corrupt_ms_with_delays(
                 output_column, corrupted_data, startrow=chunk_start, nrow=chunk_rows
             )
             table_tool.close()
-            print(f" Done")
+            print(" Done")
         except Exception as e:
             print(f" Error: {e}")
             continue
 
     print(f"\n{'=' * 70}")
-    print(f"✓ COMPLETE!")
+    print("✓ COMPLETE!")
     print(f"{'=' * 70}")
     print(f"MS: {ms_path}")
     print(f"Output column: {output_column}")
-    print(f"Processing:")
+    print("Processing:")
     print(f"  Total rows: {n_row_total:,}")
     print(f"  Total visibilities: {n_vis_total:,}")
     print(f"  Chunk size (disk): {chunk_size:,} rows")
     print(f"  Chunks processed: {n_chunks}")
     if use_gpu:
         print(f"  Batch size (GPU): {batch_gpu_size:,} visibilities")
-    print(f"Delays:")
+    print("Delays:")
     print(f"  Antennas: {n_antennas} (ref antenna: {ref_antenna})")
-    print(f"  Effect: BandpassDelay (φ = 2π·τ·ν)")
+    print("  Effect: BandpassDelay (φ = 2π·τ·ν)")
     print(f"GPU: {'ENABLED' if use_gpu else 'DISABLED'}")
     print(f"{'=' * 70}\n")
 
