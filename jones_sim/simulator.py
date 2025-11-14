@@ -57,14 +57,54 @@ class JonesSimulator:
         antenna2_ids: np.ndarray,
         use_gpu: bool = False,
         batch_gpu_size: int = 100000,
+        noise_params: Optional[Dict] = None,
     ) -> np.ndarray:
-        """Apply Jones corruption: corrupted = J1 @ ideal_matrix @ J2†"""
+        """
+        Apply Jones corruption: corrupted = J1 @ ideal_matrix @ J2†
+
+        Parameters
+        ----------
+        ideal_visibilities : np.ndarray
+            Input visibilities to corrupt
+        frequencies : np.ndarray
+            Frequency for each visibility
+        times : np.ndarray
+            Time for each visibility
+        antenna1_ids : np.ndarray
+            First antenna ID for each baseline
+        antenna2_ids : np.ndarray
+            Second antenna ID for each baseline
+        use_gpu : bool
+            Use GPU acceleration if available
+        batch_gpu_size : int
+            Batch size for GPU processing
+        noise_params : Optional[Dict]
+            Dictionary containing noise parameters:
+                - 'tsys': System temperature (K)
+                - 'aperture_eff': Aperture efficiency (0-1)
+                - 'antenna_diameter': Antenna diameter (meters)
+                - 'bandwidth': Channel bandwidth per visibility (Hz) - array
+                - 'int_time': Integration time per visibility (seconds) - array
+                - 'seed': Optional random seed for reproducibility
+            If None, no noise is added.
+
+        Returns
+        -------
+        np.ndarray
+            Corrupted visibilities with optional noise added
+        """
         n_vis = len(ideal_visibilities)
         corrupted = np.zeros_like(ideal_visibilities)
 
         if use_gpu and not CUPY_AVAILABLE:
             warnings.warn("CuPy not available, falling back to CPU")
             use_gpu = False
+
+        # Set random seed if provided
+        if noise_params is not None and "seed" in noise_params:
+            np.random.seed(noise_params["seed"])
+            if use_gpu and CUPY_AVAILABLE:
+                cp.random.seed(noise_params["seed"])
 
         if not use_gpu:
             for i in range(n_vis):
@@ -80,6 +120,10 @@ class JonesSimulator:
                 corrupted_matrix = J1 @ ideal_matrix @ J2.conj().T
                 corrupted[i] = corrupted_matrix.flatten()
 
+            # Add noise if requested (after all corruptions)
+            if noise_params is not None:
+                corrupted = self._add_thermal_noise_cpu(corrupted, noise_params)
+
             return corrupted
 
         else:
@@ -90,6 +134,7 @@ class JonesSimulator:
             for batch_idx in range(n_batches):
                 batch_start = batch_idx * batch_gpu_size
                 batch_end = min(batch_start + batch_gpu_size, n_vis)
+                batch_size_actual = batch_end - batch_start
 
                 if (batch_idx + 1) % max(1, n_batches // 10) == 0:
                     print(f"    [GPU] Batch {batch_idx + 1}/{n_batches}...", flush=True)
@@ -110,9 +155,175 @@ class JonesSimulator:
                     ideal_gpu, freq_gpu, time_gpu, ant1_gpu, ant2_gpu
                 )
 
+                # Add noise on GPU if requested (after corruption)
+                if noise_params is not None:
+                    # Extract batch-specific noise parameters
+                    noise_params_batch = noise_params.copy()
+                    if "bandwidth" in noise_params:
+                        noise_params_batch["bandwidth"] = noise_params["bandwidth"][
+                            batch_start:batch_end
+                        ]
+                    if "int_time" in noise_params:
+                        noise_params_batch["int_time"] = noise_params["int_time"][
+                            batch_start:batch_end
+                        ]
+
+                    corrupted_batch_gpu = self._add_thermal_noise_gpu(
+                        corrupted_batch_gpu, noise_params_batch
+                    )
+
                 corrupted[batch_start:batch_end] = cp.asnumpy(corrupted_batch_gpu)
 
             return corrupted
+
+    def _calculate_noise_std(
+        self,
+        tsys: float,
+        aperture_eff: float,
+        antenna_diameter: float,
+        bandwidth: np.ndarray,
+        int_time: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Calculate thermal noise standard deviation in Jy using radiometer equation.
+
+        Parameters
+        ----------
+        tsys : float
+            System temperature (K)
+        aperture_eff : float
+            Aperture efficiency (0-1)
+        antenna_diameter : float
+            Antenna diameter (meters)
+        bandwidth : np.ndarray
+            Channel bandwidth per visibility (Hz)
+        int_time : np.ndarray
+            Integration time per visibility (seconds)
+
+        Returns
+        -------
+        np.ndarray
+            Noise standard deviation in Jy for each visibility
+        """
+        # Boltzmann constant (J/K)
+        k_B = 1.380649e-23
+
+        # Calculate geometric area
+        A_geo = np.pi * (antenna_diameter / 2.0) ** 2  # m²
+
+        # Calculate SEFD (Jy)
+        # 1 Jy = 1e-26 W/m²/Hz
+        SEFD = (2 * k_B * tsys) / (aperture_eff * A_geo) / 1e-26
+
+        # Calculate noise per visibility using radiometer equation
+        # σ = SEFD / sqrt(Δν × Δt)
+        noise_std = SEFD / np.sqrt(bandwidth * int_time)
+
+        return noise_std
+
+    def _add_thermal_noise_cpu(
+        self, visibilities: np.ndarray, noise_params: Dict
+    ) -> np.ndarray:
+        """
+        Add thermal noise to visibilities on CPU.
+        Uses σ_real = σ_imag = σ/√2 convention.
+
+        Parameters
+        ----------
+        visibilities : np.ndarray
+            Complex visibilities to add noise to
+        noise_params : Dict
+            Noise parameters (tsys, aperture_eff, antenna_diameter, bandwidth, int_time)
+
+        Returns
+        -------
+        np.ndarray
+            Visibilities with added thermal noise
+        """
+        # Calculate noise standard deviation per visibility
+        noise_std = self._calculate_noise_std(
+            tsys=noise_params["tsys"],
+            aperture_eff=noise_params["aperture_eff"],
+            antenna_diameter=noise_params["antenna_diameter"],
+            bandwidth=noise_params["bandwidth"],
+            int_time=noise_params["int_time"],
+        )
+
+        # For complex noise: σ_real = σ_imag = σ_total/√2
+        # This ensures total variance = σ_total²
+        component_std = noise_std / np.sqrt(2)
+
+        # Generate Gaussian noise for each correlation
+        # Shape: (n_vis, 4) for [XX, XY, YX, YY]
+        n_vis, n_corr = visibilities.shape
+
+        # Expand component_std to match shape (n_vis, n_corr)
+        component_std_expanded = np.repeat(component_std[:, np.newaxis], n_corr, axis=1)
+
+        # Generate noise
+        noise_real = np.random.normal(0, component_std_expanded)
+        noise_imag = np.random.normal(0, component_std_expanded)
+        noise = noise_real + 1j * noise_imag
+
+        return visibilities + noise
+
+    def _add_thermal_noise_gpu(self, visibilities_gpu, noise_params: Dict):
+        """
+        Add thermal noise to visibilities on GPU.
+        Uses σ_real = σ_imag = σ/√2 convention.
+
+        Parameters
+        ----------
+        visibilities_gpu : cupy.ndarray
+            Complex visibilities on GPU to add noise to
+        noise_params : Dict
+            Noise parameters (tsys, aperture_eff, antenna_diameter, bandwidth, int_time)
+
+        Returns
+        -------
+        cupy.ndarray
+            Visibilities with added thermal noise
+        """
+        # Calculate noise standard deviation per visibility (on CPU first)
+        bandwidth_cpu = (
+            cp.asnumpy(noise_params["bandwidth"])
+            if isinstance(noise_params["bandwidth"], cp.ndarray)
+            else noise_params["bandwidth"]
+        )
+        int_time_cpu = (
+            cp.asnumpy(noise_params["int_time"])
+            if isinstance(noise_params["int_time"], cp.ndarray)
+            else noise_params["int_time"]
+        )
+
+        noise_std = self._calculate_noise_std(
+            tsys=noise_params["tsys"],
+            aperture_eff=noise_params["aperture_eff"],
+            antenna_diameter=noise_params["antenna_diameter"],
+            bandwidth=bandwidth_cpu,
+            int_time=int_time_cpu,
+        )
+
+        # Transfer to GPU
+        noise_std_gpu = cp.asarray(noise_std)
+
+        # For complex noise: σ_real = σ_imag = σ_total/√2
+        component_std_gpu = noise_std_gpu / cp.sqrt(2)
+
+        # Generate Gaussian noise for each correlation
+        n_vis, n_corr = visibilities_gpu.shape
+
+        # Expand component_std to match shape
+        component_std_expanded = cp.repeat(
+            component_std_gpu[:, cp.newaxis], n_corr, axis=1
+        )
+
+        # Generate noise
+        noise_real = cp.random.normal(0, component_std_expanded)
+        noise_imag = cp.random.normal(0, component_std_expanded)
+        noise = noise_real + 1j * noise_imag
+
+        return visibilities_gpu + noise
 
     def _corrupt_batch_vectorized_general(
         self, ideal_gpu, freq_gpu, time_gpu, ant1_gpu, ant2_gpu
