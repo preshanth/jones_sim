@@ -9,12 +9,11 @@
 - Let it fail if something's wrong
 """
 
-import numpy as np
 import arviz as az
+import casatools
+import numpy as np
 import pymc as pm
 import pytensor.tensor as pt
-import casatools
-
 from casa_interface import MeasurementSetHandler
 
 
@@ -49,7 +48,7 @@ class SimpleDelaySolver:
         self.trace = None
 
         print(f"\n{'=' * 70}")
-        print(f"SIMPLE BAYESIAN DELAY SOLVER")
+        print("SIMPLE BAYESIAN DELAY SOLVER")
         print(f"{'=' * 70}")
         print(f"MS: {ms_path}")
         print(f"CASA table: {casa_cal_table}")
@@ -62,7 +61,7 @@ class SimpleDelaySolver:
             field: Field ID
         """
         print(f"\n{'=' * 70}")
-        print(f"LOADING DATA")
+        print("LOADING DATA")
         print(f"{'=' * 70}")
 
         # Get summary
@@ -95,7 +94,7 @@ class SimpleDelaySolver:
         tb.close()
 
         # Average over TIME for each (baseline, channel) pair
-        print(f"\n⏱ Averaging over time...")
+        print("\n⏱ Averaging over time...")
 
         # Create unique (ant1, ant2, chan) keys
         baseline_chan_dict = {}
@@ -161,7 +160,7 @@ class SimpleDelaySolver:
     def read_casa_delays(self):
         """Read CASA delays - REQUIRED."""
         print(f"\n{'=' * 70}")
-        print(f"READING CASA DELAYS")
+        print("READING CASA DELAYS")
         print(f"{'=' * 70}")
 
         tb = casatools.table()
@@ -204,7 +203,7 @@ class SimpleDelaySolver:
         self.casa_delays = casa_delays_ns * 1e-9
         self.casa_delays_std = np.std(casa_delays_ns) * 1e-9
 
-        print(f"\nCASA delays (ns):")
+        print("\nCASA delays (ns):")
         for ant in range(self.n_antennas):
             print(f"  Ant {ant}: {casa_delays_ns[ant]:8.3f}")
         print(f"Std: {self.casa_delays_std * 1e9:.3f} ns")
@@ -212,7 +211,7 @@ class SimpleDelaySolver:
     def estimate_phase_noise(self):
         """Estimate phase noise from RAW residuals (no CASA correction)."""
         print(f"\n{'=' * 70}")
-        print(f"ESTIMATING PHASE NOISE")
+        print("ESTIMATING PHASE NOISE")
         print(f"{'=' * 70}")
 
         # RAW phase residuals (no CASA correction!)
@@ -251,7 +250,7 @@ class SimpleDelaySolver:
             prior_bound_ns: Bounds around CASA delays in ns (default ±0.5 ns)
         """
         print(f"\n{'=' * 70}")
-        print(f"BUILDING MODEL")
+        print("BUILDING MODEL")
         print(f"{'=' * 70}")
 
         # Phase residuals (wrapped)
@@ -312,7 +311,7 @@ class SimpleDelaySolver:
 
     def sample(self, draws=2000, tune=3000, chains=4):
         print(f"\n{'=' * 70}")
-        print(f"SAMPLING")
+        print("SAMPLING")
         print(f"{'=' * 70}")
         print(f"Draws: {draws}, Tune: {tune}, Chains: {chains}")
 
@@ -330,12 +329,12 @@ class SimpleDelaySolver:
                 idata_kwargs={"log_likelihood": True},
             )
 
-        print(f"✓ Sampling complete")
+        print("✓ Sampling complete")
 
     def summarize(self):
         """Print results."""
         print(f"\n{'=' * 70}")
-        print(f"RESULTS")
+        print("RESULTS")
         print(f"{'=' * 70}")
 
         delays_free_post = self.trace.posterior["delays_free"].values
@@ -381,7 +380,7 @@ class SimpleDelaySolver:
         max_rhat = summary["r_hat"].max()
         min_ess = summary["ess_bulk"].min()
 
-        print(f"\nConvergence:")
+        print("\nConvergence:")
         print(
             f"  max(r_hat): {max_rhat:.4f} {'✓ GOOD' if max_rhat < 1.01 else '✗ BAD'}"
         )

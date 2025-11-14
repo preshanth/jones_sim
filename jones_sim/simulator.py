@@ -1,7 +1,7 @@
 """Jones matrix simulator with GPU acceleration"""
 
 import warnings
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -134,8 +134,6 @@ class JonesSimulator:
             for batch_idx in range(n_batches):
                 batch_start = batch_idx * batch_gpu_size
                 batch_end = min(batch_start + batch_gpu_size, n_vis)
-                batch_size_actual = batch_end - batch_start
-
                 if (batch_idx + 1) % max(1, n_batches // 10) == 0:
                     print(f"    [GPU] Batch {batch_idx + 1}/{n_batches}...", flush=True)
 

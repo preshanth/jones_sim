@@ -73,7 +73,7 @@ def corrupt_ms_with_delays(
     n_fields = len(summary["field_names"])
 
     print(f"\n{'=' * 70}")
-    print(f"MS METADATA")
+    print("MS METADATA")
     print(f"{'=' * 70}")
     print(f"Antennas: {n_antennas}")
     print(f"Spectral Windows: {n_spw}")
@@ -93,7 +93,7 @@ def corrupt_ms_with_delays(
         )
 
     print(f"\n{'=' * 70}")
-    print(f"BUILDING SPW FREQUENCY MAP")
+    print("BUILDING SPW FREQUENCY MAP")
     print(f"{'=' * 70}")
 
     spw_map: Dict = {}
@@ -112,7 +112,7 @@ def corrupt_ms_with_delays(
                 print(f"  Calculated channel width: {chan_width / 1e6:.3f} MHz")
             else:
                 chan_width = 1e6  # Default 1 MHz
-                print(f"  WARNING: Using default 1 MHz bandwidth")
+                print("  WARNING: Using default 1 MHz bandwidth")
 
         spw_map[spw_id] = {
             "n_chan": spw_info["n_channels"],
@@ -123,7 +123,7 @@ def corrupt_ms_with_delays(
     print(f"✓ Built map for {n_spw} SPWs")
 
     print(f"\n{'=' * 70}")
-    print(f"GENERATING ANTENNA DELAYS")
+    print("GENERATING ANTENNA DELAYS")
     print(f"{'=' * 70}")
 
     delay_range_sec = delay_range_ns * 1e-9
@@ -145,7 +145,7 @@ def corrupt_ms_with_delays(
         print(f"  Antenna {ant_id}: {delay_ns:8.3f} ns")
 
     print(f"\n{'=' * 70}")
-    print(f"CREATING JONES SIMULATOR")
+    print("CREATING JONES SIMULATOR")
     print(f"{'=' * 70}")
 
     delay_effect = BandpassDelay(
@@ -155,13 +155,13 @@ def corrupt_ms_with_delays(
 
     jones_sim = JonesSimulator()
     jones_sim.add_effect("delays", delay_effect)
-    print(f"✓ BandpassDelay effect created")
+    print("✓ BandpassDelay effect created")
 
     if use_gpu:
-        print(f"✓ GPU ACCELERATION ENABLED")
+        print("✓ GPU ACCELERATION ENABLED")
 
     if add_noise:
-        print(f"✓ THERMAL NOISE ENABLED")
+        print("✓ THERMAL NOISE ENABLED")
         print(f"  Tsys: {tsys} K")
         print(f"  Aperture efficiency: {aperture_eff}")
         print(f"  Antenna diameter: {antenna_diameter} m")
@@ -176,7 +176,7 @@ def corrupt_ms_with_delays(
             print(f"  Noise seed: {noise_seed}")
 
     print(f"\n{'=' * 70}")
-    print(f"DETERMINING MS SIZE")
+    print("DETERMINING MS SIZE")
     print(f"{'=' * 70}")
 
     try:
@@ -193,7 +193,7 @@ def corrupt_ms_with_delays(
 
     # Calculate integration time from TIME column
     print(f"\n{'=' * 70}")
-    print(f"CALCULATING INTEGRATION TIME")
+    print("CALCULATING INTEGRATION TIME")
     print(f"{'=' * 70}")
 
     try:
@@ -215,9 +215,7 @@ def corrupt_ms_with_delays(
                 int_time = np.median(intervals)
             else:
                 int_time = 1.0  # Default fallback
-                print(
-                    f"Warning: Cannot determine integration time, using default 1.0 s"
-                )
+                print("Warning: Cannot determine integration time, using default 1.0 s")
             table_tool.close()
 
         print(f"✓ Integration time (Δt): {int_time:.3f} seconds")
@@ -230,9 +228,9 @@ def corrupt_ms_with_delays(
     # Calculate and report expected noise levels
     if add_noise:
         print(f"\n{'=' * 70}")
-        print(f"EXPECTED NOISE LEVELS (per SPW)")
+        print("EXPECTED NOISE LEVELS (per SPW)")
         print(f"{'=' * 70}")
-        print(f"Formula: σ = SEFD / sqrt(Δν × Δt)")
+        print("Formula: σ = SEFD / sqrt(Δν × Δt)")
         print(f"         = {SEFD:.1f} / sqrt(bandwidth × {int_time:.3f})")
         print()
 
@@ -262,7 +260,7 @@ def corrupt_ms_with_delays(
         )
         print(f"{'─' * 70}")
 
-        print(f"  Reading chunk...", end="", flush=True)
+        print("  Reading chunk...", end="", flush=True)
 
         try:
             table_tool = casatools.table()
@@ -297,7 +295,7 @@ def corrupt_ms_with_delays(
             print(f" Error: {e}")
             continue
 
-        print(f"  Reshaping for corruption...", end="", flush=True)
+        print("  Reshaping for corruption...", end="", flush=True)
 
         ideal_visibilities_list = []
         frequencies_expanded_list = []
@@ -351,7 +349,7 @@ def corrupt_ms_with_delays(
                     f"  [DEBUG] Expected noise range: {(SEFD / np.sqrt(bandwidth_expanded.max() * int_time)) * 1e3:.3f} - {(SEFD / np.sqrt(bandwidth_expanded.min() * int_time)) * 1e3:.3f} mJy"
                 )
 
-        print(f"  Corrupting...", end="", flush=True)
+        print("  Corrupting...", end="", flush=True)
 
         # Prepare noise parameters if needed
         noise_params = None
@@ -378,13 +376,13 @@ def corrupt_ms_with_delays(
             noise_params=noise_params,
         )
 
-        print(f" Done")
+        print(" Done")
 
         # Check for NaNs in corrupted data
         n_nans_output = np.sum(np.isnan(corrupted_visibilities))
         if n_nans_output > 0:
             print(f"  ERROR: Corrupted data contains {n_nans_output} NaNs!")
-            print(f"  [DEBUG] Checking which step produced NaNs...")
+            print("  [DEBUG] Checking which step produced NaNs...")
 
             # Try without noise to isolate the issue
             test_corrupted = jones_sim.corrupt_visibilities(
@@ -404,14 +402,14 @@ def corrupt_ms_with_delays(
                     f"  ERROR: NaNs from Jones corruption itself ({n_nans_no_noise} NaNs)"
                 )
             else:
-                print(f"  ERROR: NaNs from noise addition")
+                print("  ERROR: NaNs from noise addition")
 
         if chunk_idx == 0:  # Report stats for first chunk
             print(
                 f"  [DEBUG] Corrupted vis stats: mean amp = {np.mean(np.abs(corrupted_visibilities)):.3e}"
             )
 
-        print(f"  Reshaping back...", end="", flush=True)
+        print("  Reshaping back...", end="", flush=True)
 
         corrupted_data = np.zeros_like(data_chunk)
         vis_idx = 0
@@ -426,9 +424,9 @@ def corrupt_ms_with_delays(
                 ]
                 vis_idx += 1
 
-        print(f" Done")
+        print(" Done")
 
-        print(f"  Writing chunk...", end="", flush=True)
+        print("  Writing chunk...", end="", flush=True)
 
         try:
             table_tool = casatools.table()
@@ -443,7 +441,7 @@ def corrupt_ms_with_delays(
             continue
 
     print(f"\n{'=' * 70}")
-    print(f"✓ COMPLETE!")
+    print("✓ COMPLETE!")
     print(f"{'=' * 70}")
     print(f"MS: {ms_path}")
     print(f"Output column: {output_column}")
@@ -457,18 +455,18 @@ def corrupt_ms_with_delays(
         print(f"  Batch size (GPU): {batch_gpu_size:,} visibilities")
     print("Delays:")
     print(f"  Antennas: {n_antennas} (ref antenna: {ref_antenna})")
-    print(f"  Effect: BandpassDelay (φ = 2π·τ·ν)")
+    print("  Effect: BandpassDelay (φ = 2π·τ·ν)")
     if add_noise:
-        print(f"Thermal Noise:")
+        print("Thermal Noise:")
         print(f"  Tsys: {tsys} K")
         print(f"  Aperture efficiency: {aperture_eff}")
         print(f"  Antenna diameter: {antenna_diameter} m")
         print(f"  SEFD: {SEFD:.1f} Jy")
-        print(f"  Method: Radiometer equation (σ_real = σ_imag = σ/√2)")
+        print("  Method: Radiometer equation (σ_real = σ_imag = σ/√2)")
         if noise_seed is not None:
             print(f"  Seed: {noise_seed}")
     else:
-        print(f"Thermal Noise: DISABLED")
+        print("Thermal Noise: DISABLED")
     print(f"GPU: {'ENABLED' if use_gpu else 'DISABLED'}")
     print(f"{'=' * 70}\n")
 

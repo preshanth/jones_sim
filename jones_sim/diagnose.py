@@ -2,8 +2,6 @@
 """Diagnostic script to examine MS data and understand noise characteristics."""
 
 import numpy as np
-import matplotlib.pyplot as plt
-from pathlib import Path
 
 try:
     from casa_interface import MeasurementSetHandler
@@ -19,7 +17,7 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
     """Examine MS data to understand noise characteristics."""
 
     print(f"\n{'=' * 80}")
-    print(f"MS NOISE DIAGNOSTICS")
+    print("MS NOISE DIAGNOSTICS")
     print(f"{'=' * 80}")
     print(f"MS: {ms_path}")
     print(f"Cal table: {cal_table}")
@@ -40,7 +38,7 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
     data_array = data_dict["data"]  # (n_corr, n_chan, n_row)
     antenna1 = data_dict["antenna1"]
     antenna2 = data_dict["antenna2"]
-    times = data_dict["time"]
+    # times = data_dict["time"]
 
     if "frequency" in data_dict:
         freqs = data_dict["frequency"]
@@ -90,48 +88,48 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
     frequencies = np.array(freq_list)
     antenna1 = np.array(a1_list, dtype=int)
     antenna2 = np.array(a2_list, dtype=int)
-    n_vis = len(observed_vis)
+    # n_vis = len(observed_vis)
 
     print(f"\n{'=' * 80}")
-    print(f"AMPLITUDE STATISTICS")
+    print("AMPLITUDE STATISTICS")
     print(f"{'=' * 80}")
 
     # Compute amplitudes
     obs_amp = np.abs(observed_vis)
     model_amp = np.abs(model_vis)
 
-    print(f"\nObserved amplitudes:")
+    print("\nObserved amplitudes:")
     print(f"  Mean: {np.mean(obs_amp):.6f} Jy")
     print(f"  Std: {np.std(obs_amp):.6f} Jy")
     print(f"  Min: {np.min(obs_amp):.6f} Jy")
     print(f"  Max: {np.max(obs_amp):.6f} Jy")
     print(f"  Median: {np.median(obs_amp):.6f} Jy")
 
-    print(f"\nModel amplitudes:")
+    print("\nModel amplitudes:")
     print(f"  Mean: {np.mean(model_amp):.6f} Jy")
     print(f"  Std: {np.std(model_amp):.6f} Jy")
     print(f"  Min: {np.min(model_amp):.6f} Jy")
     print(f"  Max: {np.max(model_amp):.6f} Jy")
 
-    print(f"\nAmplitude ratio (obs/model):")
+    print("\nAmplitude ratio (obs/model):")
     amp_ratio = obs_amp / (model_amp + 1e-10)
     print(f"  Mean: {np.mean(amp_ratio):.6f}")
     print(f"  Std: {np.std(amp_ratio):.6f}")
-    print(f"  This should be ~1.0 if delays don't affect amplitude")
+    print("  This should be ~1.0 if delays don't affect amplitude")
 
     # Compute phases
     obs_phase = np.angle(observed_vis)  # (n_vis, 4) in radians
     model_phase = np.angle(model_vis)
 
     print(f"\n{'=' * 80}")
-    print(f"PHASE STATISTICS (UNCORRECTED)")
+    print("PHASE STATISTICS (UNCORRECTED)")
     print(f"{'=' * 80}")
 
-    print(f"\nObserved phases:")
+    print("\nObserved phases:")
     print(f"  Mean: {np.mean(obs_phase):.3f} rad")
     print(f"  Std: {np.std(obs_phase):.3f} rad")
 
-    print(f"\nModel phases:")
+    print("\nModel phases:")
     print(f"  Mean: {np.mean(model_phase):.3f} rad")
     print(f"  Std: {np.std(model_phase):.3f} rad")
 
@@ -141,17 +139,17 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
     # Wrap to [-π, π]
     phase_diff_wrapped = np.angle(np.exp(1j * phase_diff_raw))
 
-    print(f"\nPhase residual (obs - model):")
+    print("\nPhase residual (obs - model):")
     print(f"  Mean: {np.mean(phase_diff_wrapped):.3f} rad")
     print(f"  Std: {np.std(phase_diff_wrapped):.3f} rad")
     print(f"  Min: {np.min(phase_diff_wrapped):.3f} rad")
     print(f"  Max: {np.max(phase_diff_wrapped):.3f} rad")
-    print(f"  Large std indicates delay corruption!")
+    print("  Large std indicates delay corruption!")
 
     # Read CASA delays if available
     if cal_table:
         print(f"\n{'=' * 80}")
-        print(f"APPLYING CASA DELAYS")
+        print("APPLYING CASA DELAYS")
         print(f"{'=' * 80}")
 
         tb.open(cal_table)
@@ -187,7 +185,7 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
         casa_delays_ns[mask] /= delay_counts[mask]
         casa_delays = casa_delays_ns * 1e-9  # Convert to seconds
 
-        print(f"\nCASA delays (ns):")
+        print("\nCASA delays (ns):")
         for ant in range(min(n_antennas, 10)):
             print(f"  Ant {ant}: {casa_delays_ns[ant]:.3f}")
 
@@ -202,14 +200,14 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
         phase_correction_2 = 2 * np.pi * (tau2 - tau1) * frequencies
 
         print(f"\n{'=' * 80}")
-        print(f"PHASE RESIDUALS AFTER CASA CORRECTION")
+        print("PHASE RESIDUALS AFTER CASA CORRECTION")
         print(f"{'=' * 80}")
 
         # Test sign 1
         phase_diff_corrected_1 = phase_diff_wrapped - phase_correction_1[:, None]
         phase_diff_corrected_1 = np.angle(np.exp(1j * phase_diff_corrected_1))
 
-        print(f"\nSign convention 1: φ = 2π(tau1 - tau2)ν")
+        print("\nSign convention 1: φ = 2π(tau1 - tau2)ν")
         print(f"  Mean residual: {np.mean(phase_diff_corrected_1):.6f} rad")
         print(f"  Std residual: {np.std(phase_diff_corrected_1):.6f} rad")
         print(f"  RMS residual: {np.sqrt(np.mean(phase_diff_corrected_1**2)):.6f} rad")
@@ -218,7 +216,7 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
         phase_diff_corrected_2 = phase_diff_wrapped - phase_correction_2[:, None]
         phase_diff_corrected_2 = np.angle(np.exp(1j * phase_diff_corrected_2))
 
-        print(f"\nSign convention 2: φ = 2π(tau2 - tau1)ν")
+        print("\nSign convention 2: φ = 2π(tau2 - tau1)ν")
         print(f"  Mean residual: {np.mean(phase_diff_corrected_2):.6f} rad")
         print(f"  Std residual: {np.std(phase_diff_corrected_2):.6f} rad")
         print(f"  RMS residual: {np.sqrt(np.mean(phase_diff_corrected_2**2)):.6f} rad")
@@ -228,11 +226,11 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
         rms2 = np.sqrt(np.mean(phase_diff_corrected_2**2))
 
         if rms1 < rms2:
-            print(f"\n✓ Sign 1 is correct (tau1 - tau2)")
+            print("\n✓ Sign 1 is correct (tau1 - tau2)")
             phase_diff_corrected = phase_diff_corrected_1
             phase_correction = phase_correction_1
         else:
-            print(f"\n✓ Sign 2 is correct (tau2 - tau1)")
+            print("\n✓ Sign 2 is correct (tau2 - tau1)")
             phase_diff_corrected = phase_diff_corrected_2
             phase_correction = phase_correction_2
 
@@ -240,10 +238,10 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
         phase_noise_std = np.std(phase_diff_corrected)
 
         print(f"\n{'=' * 80}")
-        print(f"NOISE ESTIMATES")
+        print("NOISE ESTIMATES")
         print(f"{'=' * 80}")
 
-        print(f"\nPhase noise:")
+        print("\nPhase noise:")
         print(
             f"  Std: {phase_noise_std:.6f} rad = {np.degrees(phase_noise_std):.3f} deg"
         )
@@ -253,8 +251,8 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
         mean_amp = np.mean(obs_amp)
         amplitude_noise_from_phase = phase_noise_std * mean_amp
 
-        print(f"\nImplied amplitude noise:")
-        print(f"  σ_amp ≈ σ_phase × |V|")
+        print("\nImplied amplitude noise:")
+        print("  σ_amp ≈ σ_phase × |V|")
         print(f"  σ_amp ≈ {phase_noise_std:.6f} × {mean_amp:.3f}")
         print(f"  σ_amp ≈ {amplitude_noise_from_phase:.6f} Jy")
 
@@ -272,25 +270,25 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
             np.concatenate([residual_real.flatten(), residual_imag.flatten()])
         )
 
-        print(f"\nDirect amplitude noise estimate:")
+        print("\nDirect amplitude noise estimate:")
         print(
             f"  Std of (obs - model) after CASA correction: {amplitude_noise_direct:.6f} Jy"
         )
 
-        print(f"\nComparison:")
+        print("\nComparison:")
         print(f"  From phase: {amplitude_noise_from_phase:.6f} Jy")
         print(f"  From amplitude: {amplitude_noise_direct:.6f} Jy")
         print(f"  Ratio: {amplitude_noise_direct / amplitude_noise_from_phase:.3f}")
-        print(f"  (Should be ~1.0 if noise is Gaussian)")
+        print("  (Should be ~1.0 if noise is Gaussian)")
 
         # SNR analysis
         print(f"\n{'=' * 80}")
-        print(f"SNR ANALYSIS")
+        print("SNR ANALYSIS")
         print(f"{'=' * 80}")
 
         snr = obs_amp / amplitude_noise_direct
 
-        print(f"\nSNR statistics:")
+        print("\nSNR statistics:")
         print(f"  Mean: {np.mean(snr):.1f}")
         print(f"  Median: {np.median(snr):.1f}")
         print(f"  Min: {np.min(snr):.1f}")
@@ -298,11 +296,11 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
 
         low_snr_frac = np.sum(snr < 3) / snr.size
         print(f"  Fraction with SNR < 3: {low_snr_frac * 100:.1f}%")
-        print(f"  (Low SNR → non-Gaussian phase noise!)")
+        print("  (Low SNR → non-Gaussian phase noise!)")
 
         # Correlation analysis
         print(f"\n{'=' * 80}")
-        print(f"CORRELATION ANALYSIS")
+        print("CORRELATION ANALYSIS")
         print(f"{'=' * 80}")
 
         # Average over correlations
@@ -321,7 +319,7 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
         from scipy import stats
 
         # Fit line to phase vs frequency for each baseline
-        print(f"\nChecking for residual delay trends (phase vs freq):")
+        print("\nChecking for residual delay trends (phase vs freq):")
 
         n_test_baselines = min(5, len(unique_baselines))
         for i, (a1, a2) in enumerate(unique_baselines[:n_test_baselines]):
@@ -340,17 +338,17 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
                 )
 
         print(f"\n{'=' * 80}")
-        print(f"SUMMARY")
+        print("SUMMARY")
         print(f"{'=' * 80}")
 
-        print(f"\n✓ Use phase-only likelihood with:")
+        print("\n✓ Use phase-only likelihood with:")
         print(f"  σ_phase = {phase_noise_std:.6f} rad")
-        print(f"  OR")
+        print("  OR")
         print(f"  σ_amplitude = {amplitude_noise_direct:.6f} Jy")
 
-        print(f"\n✓ Filter visibilities with SNR < 3 for stable phase estimates")
+        print("\n✓ Filter visibilities with SNR < 3 for stable phase estimates")
 
-        print(f"\n✓ Phase wrapping: use np.angle() to wrap residuals to [-π, π]")
+        print("\n✓ Phase wrapping: use np.angle() to wrap residuals to [-π, π]")
 
     ms_handler.close()
 
