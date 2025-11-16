@@ -215,7 +215,9 @@ def corrupt_ms_with_delays(
                 int_time = np.median(intervals)
             else:
                 int_time = 1.0  # Default fallback
-                print("Warning: Cannot determine integration time, using default 1.0 s")
+                print(
+                    "Warning: Cannot determine integration time, using default 1.0 s"
+                )
             table_tool.close()
 
         print(f"✓ Integration time (Δt): {int_time:.3f} seconds")
