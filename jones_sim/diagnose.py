@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Diagnostic script to examine MS data and understand noise characteristics."""
 
+
 import numpy as np
 
 try:
@@ -38,7 +39,6 @@ def diagnose_ms_noise(ms_path, cal_table=None, spw=0, field=0, max_vis=50000):
     data_array = data_dict["data"]  # (n_corr, n_chan, n_row)
     antenna1 = data_dict["antenna1"]
     antenna2 = data_dict["antenna2"]
-    # times = data_dict["time"]
 
     if "frequency" in data_dict:
         freqs = data_dict["frequency"]
