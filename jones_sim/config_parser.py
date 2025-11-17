@@ -4,9 +4,10 @@ Loads JSON config and generates all Jones parameters from distributions.
 """
 
 import json
-import numpy as np
-from typing import Dict, Any, Optional, Union
 from pathlib import Path
+from typing import Dict, Optional
+
+import numpy as np
 
 
 class ConfigParser:
@@ -71,7 +72,7 @@ class ConfigParser:
                     f"Enabled effect '{effect}' not defined in effects section"
                 )
 
-        print(f" Config validation passed")
+        print(" Config validation passed")
 
     def get_chain_order(self) -> list:
         """Get Jones chain order."""
@@ -102,7 +103,7 @@ class ConfigParser:
             Dictionary with all parameters for each effect
         """
         print(f"\n{'=' * 70}")
-        print(f"GENERATING JONES PARAMETERS")
+        print("GENERATING JONES PARAMETERS")
         print(f"{'=' * 70}")
         print(f"Antennas: {n_antennas}")
         print(f"SPWs: {list(n_channels_per_spw.keys())}")
@@ -131,14 +132,14 @@ class ConfigParser:
             params["leakage"] = self._generate_leakage_parameters(n_antennas)
 
         if "parallactic" in enabled:
-            print(f"\n Parallactic: Will be computed from MS metadata")
+            print("\n Parallactic: Will be computed from MS metadata")
             params["parallactic"] = {"computed_from_ms": True}
 
         return params
 
     def _generate_gain_parameters(self, n_antennas: int) -> Dict:
         """Generate complex gain parameters."""
-        print(f"\n--- GAIN ---")
+        print("\n--- GAIN ---")
 
         gain_config = self.config["effects"]["gain"]
 
@@ -174,7 +175,7 @@ class ConfigParser:
         self, n_antennas: int, n_channels_per_spw: Dict[int, int]
     ) -> Dict:
         """Generate bandpass parameters."""
-        print(f"\n--- BANDPASS ---")
+        print("\n--- BANDPASS ---")
 
         bandpass_config = self.config["effects"]["bandpass"]
 
@@ -309,7 +310,7 @@ class ConfigParser:
 
     def _generate_xy_delay_parameters(self, n_antennas: int) -> Dict:
         """Generate XY differential delay parameters."""
-        print(f"\n--- XY DELAY ---")
+        print("\n--- XY DELAY ---")
 
         xy_delay_config = self.config["effects"]["xy_delay"]
         ref_antenna = xy_delay_config.get("reference_antenna", 0)
@@ -332,7 +333,7 @@ class ConfigParser:
 
     def _generate_crosshand_phase_parameters(self, n_antennas: int) -> Dict:
         """Generate cross-hand phase parameters."""
-        print(f"\n--- CROSSHAND PHASE ---")
+        print("\n--- CROSSHAND PHASE ---")
 
         crosshand_config = self.config["effects"]["crosshand_phase"]
         ref_antenna = crosshand_config.get("reference_antenna", 0)
@@ -353,7 +354,7 @@ class ConfigParser:
 
     def _generate_leakage_parameters(self, n_antennas: int) -> Dict:
         """Generate leakage (d-term) parameters."""
-        print(f"\n--- LEAKAGE ---")
+        print("\n--- LEAKAGE ---")
 
         leakage_config = self.config["effects"]["leakage"]
 
@@ -456,7 +457,7 @@ class ConfigParser:
         elif distribution == "amplitude_phase":
             # Sample amplitude and phase separately
             amp_mean = param_config.get("amplitude_mean", 0.01)
-            amp_std = param_config.get("amplitude_std", 0.005)
+            # amp_std = param_config.get("amplitude_std", 0.005)
 
             # Rayleigh distribution for amplitude
             amplitudes = np.random.rayleigh(amp_mean, size)
@@ -472,20 +473,20 @@ class ConfigParser:
     def print_summary(self):
         """Print config summary."""
         print(f"\n{'=' * 70}")
-        print(f"CONFIG SUMMARY")
+        print("CONFIG SUMMARY")
         print(f"{'=' * 70}")
         print(f"Chain order: {self.get_chain_order()}")
         print(f"Enabled effects: {self.get_enabled_effects()}")
 
         proc = self.get_processing_config()
-        print(f"\nProcessing:")
+        print("\nProcessing:")
         print(f"  GPU: {proc.get('use_gpu', False)}")
         print(f"  Chunk size: {proc.get('chunk_size_rows', 100000):,} rows")
         print(f"  Random seed: {proc.get('random_seed', 'None')}")
 
         noise = self.get_noise_config()
         if noise.get("enabled", False):
-            print(f"\nNoise:")
+            print("\nNoise:")
             thermal = noise.get("thermal_noise", {})
             print(f"  Tsys: {thermal.get('tsys_kelvin', 'N/A')} K")
             print(f"  Aperture efficiency: {thermal.get('aperture_efficiency', 'N/A')}")

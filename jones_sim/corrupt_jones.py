@@ -11,17 +11,18 @@ Complete A-to-Z implementation:
 """
 
 import sys
-import numpy as np
 from pathlib import Path
 from typing import Dict
+
 import casatools
+import numpy as np
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+from casa_interface import MeasurementSetHandler
 from config_parser import ConfigParser
 from jones_chain import JonesChain
-from casa_interface import MeasurementSetHandler
 
 
 def compute_parallactic_angles(
@@ -129,7 +130,7 @@ def corrupt_ms_with_jones(
     """
 
     print(f"\n{'=' * 70}")
-    print(f"JONES MATRIX CORRUPTION")
+    print("JONES MATRIX CORRUPTION")
     print(f"{'=' * 70}")
     print(f"MS: {ms_path}")
     print(f"Config: {config_path}")
@@ -139,7 +140,7 @@ def corrupt_ms_with_jones(
     # STEP 1: Load and parse config (ONCE!)
     # ========================================================================
     print(f"\n{'=' * 70}")
-    print(f"STEP 1: LOADING CONFIGURATION")
+    print("STEP 1: LOADING CONFIGURATION")
     print(f"{'=' * 70}")
 
     parser = ConfigParser(config_path)
@@ -159,7 +160,7 @@ def corrupt_ms_with_jones(
     # STEP 2: Open MS and get metadata (ONCE!)
     # ========================================================================
     print(f"\n{'=' * 70}")
-    print(f"STEP 2: OPENING MS")
+    print("STEP 2: OPENING MS")
     print(f"{'=' * 70}")
 
     ms_handler = MeasurementSetHandler(ms_path)
@@ -176,7 +177,7 @@ def corrupt_ms_with_jones(
     # STEP 3: Build SPW map (ONCE!)
     # ========================================================================
     print(f"\n{'=' * 70}")
-    print(f"STEP 3: BUILDING SPW MAP")
+    print("STEP 3: BUILDING SPW MAP")
     print(f"{'=' * 70}")
 
     spw_map: Dict = {}
@@ -218,7 +219,7 @@ def corrupt_ms_with_jones(
     obs_metadata = None
     if "parallactic" in parser.get_enabled_effects():
         print(f"\n{'=' * 70}")
-        print(f"STEP 4: LOADING OBSERVATORY METADATA")
+        print("STEP 4: LOADING OBSERVATORY METADATA")
         print(f"{'=' * 70}")
 
         obs_metadata = load_observatory_metadata(ms_path)
@@ -236,7 +237,7 @@ def corrupt_ms_with_jones(
     # STEP 5: Generate Jones parameters (ONCE!)
     # ========================================================================
     print(f"\n{'=' * 70}")
-    print(f"STEP 5: GENERATING JONES PARAMETERS")
+    print("STEP 5: GENERATING JONES PARAMETERS")
     print(f"{'=' * 70}")
 
     params = parser.generate_all_parameters(n_antennas, n_channels_per_spw)
@@ -250,7 +251,7 @@ def corrupt_ms_with_jones(
     # STEP 6: Create Jones chain (ONCE!)
     # ========================================================================
     print(f"\n{'=' * 70}")
-    print(f"STEP 6: CREATING JONES CHAIN")
+    print("STEP 6: CREATING JONES CHAIN")
     print(f"{'=' * 70}")
 
     jones_chain = JonesChain(
@@ -274,7 +275,7 @@ def corrupt_ms_with_jones(
         noise_seed = noise_config.get("random_seed")
 
         print(f"\n{'=' * 70}")
-        print(f"THERMAL NOISE ENABLED")
+        print("THERMAL NOISE ENABLED")
         print(f"{'=' * 70}")
         print(f"Tsys: {tsys} K")
         print(f"Aperture efficiency: {aperture_eff}")
@@ -289,7 +290,7 @@ def corrupt_ms_with_jones(
     # STEP 8: Get MS size and integration time
     # ========================================================================
     print(f"\n{'=' * 70}")
-    print(f"STEP 8: MS SIZE AND INTEGRATION TIME")
+    print("STEP 8: MS SIZE AND INTEGRATION TIME")
     print(f"{'=' * 70}")
 
     tb = casatools.table()
@@ -334,7 +335,7 @@ def corrupt_ms_with_jones(
         print(f"  Rows: {chunk_start:,} - {chunk_end:,} ({chunk_rows:,})")
 
         # Read chunk
-        print(f"  Reading MODEL_DATA...", end="", flush=True)
+        print("  Reading MODEL_DATA...", end="", flush=True)
 
         tb.open(ms_path)
         data_chunk = tb.getcol("MODEL_DATA", startrow=chunk_start, nrow=chunk_rows)
@@ -348,7 +349,7 @@ def corrupt_ms_with_jones(
         print(f" Done ({n_corr}×{n_chan_max}×{n_row})")
 
         # Flatten
-        print(f"  Flattening...", end="", flush=True)
+        print("  Flattening...", end="", flush=True)
 
         ideal_visibilities = []
         frequencies_expanded = []
@@ -411,7 +412,7 @@ def corrupt_ms_with_jones(
             parallactic_angles2 = np.zeros(n_vis_chunk)
 
         # Corrupt
-        print(f"  Corrupting...", end="", flush=True)
+        print("  Corrupting...", end="", flush=True)
 
         noise_params = None
         if add_noise:
@@ -440,10 +441,10 @@ def corrupt_ms_with_jones(
             noise_params=noise_params,
         )
 
-        print(f" Done")
+        print(" Done")
 
         # Reshape
-        print(f"  Reshaping...", end="", flush=True)
+        print("  Reshaping...", end="", flush=True)
 
         corrupted_data = np.zeros_like(data_chunk)
         vis_idx = 0
@@ -458,7 +459,7 @@ def corrupt_ms_with_jones(
                 ]
                 vis_idx += 1
 
-        print(f" Done")
+        print(" Done")
 
         # Write
         print(f"  Writing to {output_column}...", end="", flush=True)
@@ -469,23 +470,23 @@ def corrupt_ms_with_jones(
                 output_column, corrupted_data, startrow=chunk_start, nrow=chunk_rows
             )
             tb.close()
-            print(f" Done")
+            print(" Done")
         except Exception as e:
             print(f" Error: {e}")
             continue
 
     # Summary
     print(f"\n{'=' * 70}")
-    print(f" COMPLETE!")
+    print(" COMPLETE!")
     print(f"{'=' * 70}")
     print(f"MS: {ms_path}")
     print(f"Config: {config_path}")
     print(f"Output column: {output_column}")
-    print(f"Processing:")
+    print("Processing:")
     print(f"  Total rows: {n_row_total:,}")
     print(f"  Total visibilities: {n_vis_total:,}")
     print(f"  Chunks: {n_chunks}")
-    print(f"Jones Chain:")
+    print("Jones Chain:")
     print(f"  Order: {parser.get_chain_order()}")
     print(f"  Enabled: {parser.get_enabled_effects()}")
     if add_noise:

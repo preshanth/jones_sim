@@ -8,9 +8,10 @@ Physical order (Sky → Correlator): P → D → C → R → B → G
 PURE MATH - NO MS I/O
 """
 
-import numpy as np
 import warnings
 from typing import Dict, Optional
+
+import numpy as np
 
 try:
     import cupy as cp
@@ -55,7 +56,7 @@ class JonesChain:
         self.enabled_effects = config_params.get("_enabled_effects", [])
 
         print(f"\n{'=' * 70}")
-        print(f"JONES CHAIN INITIALIZED")
+        print("JONES CHAIN INITIALIZED")
         print(f"{'=' * 70}")
         print(f"Antennas: {n_antennas}")
         print(f"Chain order: {self.chain_order}")
@@ -279,7 +280,7 @@ class JonesChain:
         Returns:
             (n_vis, 4) array of corrupted visibilities
         """
-        n_vis = len(ideal_visibilities)
+        # n_vis = len(ideal_visibilities)
 
         use_gpu = use_gpu and self.use_gpu
 
