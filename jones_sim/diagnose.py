@@ -4,7 +4,7 @@
 import numpy as np
 
 try:
-    from casa_interface import MeasurementSetHandler
+    from .casa_interface import MeasurementSetHandler
 
     CASA_AVAILABLE = True
 except ImportError:

@@ -16,10 +16,24 @@ import casatools
 import numpy as np
 import pymc as pm
 import pytensor.tensor as pt
-from casa_interface import MeasurementSetHandler
+from .casa_interface import MeasurementSetHandler
+from .simulator import Simulator
 from collections import defaultdict
 from typing import Optional
 import pickle
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    import jax
+    import jax.numpy as jnp
+    from pytensor.link.jax.dispatch import jax_funcify
+    JAX_AVAILABLE = True
+except ImportError:
+    JAX_AVAILABLE = False
+    jax = None
+    jnp = None
 
 
 class BayesianDelaySampler:
@@ -319,14 +333,14 @@ class BayesianDelaySampler:
             delays = pt.concatenate([pt.as_tensor([self.casa_delays[0]]), delays_free])
 
             # Forward model: Apply delays to MODEL visibilities
+            # V_pred = V_model * exp(+1j * 2π * (τ1-τ2) * ν)
             tau1 = delays[self.antenna1]  # (n_vis,)
             tau2 = delays[self.antenna2]  # (n_vis,)
 
             # Delay phase shift
             delay_phase = 2 * np.pi * (tau1 - tau2) * self.frequencies  # (n_vis,)
 
-            # Apply rotation to MODEL visibilities (complex multiplication)
-            # V_corrected = V_model * exp(-i * delay_phase)
+            # Apply rotation to MODEL visibilities
             cos_delay = pt.cos(delay_phase)  # (n_vis,)
             sin_delay = pt.sin(delay_phase)  # (n_vis,)
 
@@ -334,12 +348,13 @@ class BayesianDelaySampler:
             cos_delay_bc = cos_delay[:, None]
             sin_delay_bc = sin_delay[:, None]
 
-            # Apply rotation
+            # Apply rotation: V_pred = V_model * exp(+i * delay_phase)
+            # (re + i*im) * (cos + i*sin) = (re*cos - im*sin) + i*(im*cos + re*sin)
             model_real_corrected = (
                 cos_delay_bc * self.model_vis_real - sin_delay_bc * self.model_vis_imag
             )
             model_imag_corrected = (
-                sin_delay_bc * self.model_vis_real + cos_delay_bc * self.model_vis_imag
+                cos_delay_bc * self.model_vis_imag + sin_delay_bc * self.model_vis_real
             )
 
             # Complex Gaussian likelihood = 2 independent Normal likelihoods

@@ -5,9 +5,9 @@ import sys
 from typing import Callable, Dict, Optional
 
 import numpy as np
-from casa_interface import MeasurementSetHandler
-from effects import BandpassDelay
-from simulator import JonesSimulator
+from .casa_interface import MeasurementSetHandler
+from .effects import BandpassDelay
+from .simulator import JonesSimulator
 
 
 def corrupt_ms_with_delays(
@@ -151,6 +151,7 @@ def corrupt_ms_with_delays(
     delay_effect = BandpassDelay(
         tau_xx=antenna_delays,
         tau_yy=antenna_delays,
+        ref_freq=0.0,  # Use absolute frequency for delay solving
     )
 
     jones_sim = JonesSimulator()

@@ -7,11 +7,18 @@ import numpy as np
 
 try:
     import cupy as cp
-
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
     cp = None
+
+try:
+    import jax.numpy as jnp
+    import jax
+    JAX_AVAILABLE = True
+except ImportError:
+    JAX_AVAILABLE = False
+    jnp = None
 
 
 class JonesSimulator:
@@ -24,6 +31,7 @@ class JonesSimulator:
             "leakage",
             "gains",
             "bandpass",
+            "delays",  # Alias for bandpass delays
             "rotation_measure",
             "rl_delay",
             "crosshand_phase",
@@ -149,7 +157,7 @@ class JonesSimulator:
                 ant2_gpu = cp.asarray(ant2_batch, dtype=cp.int32)
                 time_gpu = cp.asarray(time_batch, dtype=cp.float64)
 
-                corrupted_batch_gpu = self._corrupt_batch_vectorized_general(
+                corrupted_batch_gpu = self._corrupt_batch_vectorized_delays(
                     ideal_gpu, freq_gpu, time_gpu, ant1_gpu, ant2_gpu
                 )
 
@@ -323,48 +331,161 @@ class JonesSimulator:
 
         return visibilities_gpu + noise
 
-    def _corrupt_batch_vectorized_general(
+    def _corrupt_batch_vectorized_delays(
         self, ideal_gpu, freq_gpu, time_gpu, ant1_gpu, ant2_gpu
     ):
-        """GENERAL matrix form - FULLY VECTORIZED on GPU."""
-        batch_size = len(ideal_gpu)
+        """Vectorized delay corruption on GPU.
 
+        Matches CPU path behavior for BandpassDelay effect.
+        Uses formula: phase = 2π * tau * (freq - ref_freq)
+
+        For delay solving where ref_freq=0, this simplifies to: phase = 2π * tau * freq
+        """
+        batch_size = len(ideal_gpu)
         ideal_matrix_gpu = ideal_gpu.reshape(batch_size, 2, 2)
 
         if "delays" not in self.effects:
             return ideal_gpu
 
         delay_effect = self.effects["delays"]
+
+        # Get delay arrays - handle scalar, array, or callable
+        # For GPU path, we only support array (per-antenna delays)
         tau_xx = delay_effect.tau_xx
+        tau_yy = delay_effect.tau_yy
+        ref_freq = getattr(delay_effect, 'ref_freq', 0.0)
+
+        # Convert to arrays if scalar
+        if not isinstance(tau_xx, np.ndarray):
+            n_ant = int(cp.max(cp.maximum(ant1_gpu, ant2_gpu)).get()) + 1
+            tau_xx = np.full(n_ant, tau_xx)
+        if not isinstance(tau_yy, np.ndarray):
+            n_ant = int(cp.max(cp.maximum(ant1_gpu, ant2_gpu)).get()) + 1
+            tau_yy = np.full(n_ant, tau_yy)
 
         tau_xx_gpu = cp.asarray(tau_xx, dtype=cp.float64)
+        tau_yy_gpu = cp.asarray(tau_yy, dtype=cp.float64)
 
-        tau_1_gpu = tau_xx_gpu[ant1_gpu]
-        tau_2_gpu = tau_xx_gpu[ant2_gpu]
+        # Get delays for each antenna in batch
+        tau_xx_1 = tau_xx_gpu[ant1_gpu]
+        tau_yy_1 = tau_yy_gpu[ant1_gpu]
+        tau_xx_2 = tau_xx_gpu[ant2_gpu]
+        tau_yy_2 = tau_yy_gpu[ant2_gpu]
 
+        # Compute phases using same formula as BandpassDelay.jones_matrix()
+        # phase = 2π * tau * (freq - ref_freq)
         two_pi = 2.0 * cp.pi
-        phases_1 = two_pi * tau_1_gpu * freq_gpu
-        phases_2 = two_pi * tau_2_gpu * freq_gpu
+        freq_shifted = freq_gpu - ref_freq
 
-        exp_phases_1 = cp.exp(1j * phases_1)
-        exp_phases_2 = cp.exp(1j * phases_2)
+        phase_xx_1 = two_pi * tau_xx_1 * freq_shifted
+        phase_yy_1 = two_pi * tau_yy_1 * freq_shifted
+        phase_xx_2 = two_pi * tau_xx_2 * freq_shifted
+        phase_yy_2 = two_pi * tau_yy_2 * freq_shifted
 
+        # Build J1 matrices
         J1_batch = cp.zeros((batch_size, 2, 2), dtype=cp.complex128)
-        J1_batch[:, 0, 0] = exp_phases_1
-        J1_batch[:, 1, 1] = exp_phases_1
+        J1_batch[:, 0, 0] = cp.exp(1j * phase_xx_1)
+        J1_batch[:, 1, 1] = cp.exp(1j * phase_yy_1)
 
+        # Build J2 matrices
         J2_batch = cp.zeros((batch_size, 2, 2), dtype=cp.complex128)
-        J2_batch[:, 0, 0] = exp_phases_2
-        J2_batch[:, 1, 1] = exp_phases_2
+        J2_batch[:, 0, 0] = cp.exp(1j * phase_xx_2)
+        J2_batch[:, 1, 1] = cp.exp(1j * phase_yy_2)
 
+        # Apply corruption: J1 @ ideal @ J2†
         temp = cp.einsum("bij,bjk->bik", J1_batch, ideal_matrix_gpu)
-
         J2_conj_T = J2_batch.conj().transpose(0, 2, 1)
         corrupted_matrix = cp.einsum("bij,bjk->bik", temp, J2_conj_T)
 
-        corrupted_gpu = corrupted_matrix.reshape(batch_size, 4)
+        return corrupted_matrix.reshape(batch_size, 4)
 
-        return corrupted_gpu
+    def predict_visibilities(
+        self,
+        model_vis: np.ndarray,
+        frequencies: np.ndarray,
+        antenna1: np.ndarray,
+        antenna2: np.ndarray,
+        params: Dict[str, np.ndarray],
+        use_jax: bool = True,
+    ) -> np.ndarray:
+        """Vectorized forward model for solving.
+
+        Parameters
+        ----------
+        model_vis : np.ndarray
+            Model visibilities, shape (n_row, n_chan, n_corr)
+        frequencies : np.ndarray
+            Channel frequencies in Hz, shape (n_chan,)
+        antenna1, antenna2 : np.ndarray
+            Antenna indices, shape (n_row,)
+        params : Dict[str, np.ndarray]
+            Calibration parameters: K, G, B, D
+        use_jax : bool
+            Use JAX (default True, needed for autodiff in solver)
+
+        Returns
+        -------
+        np.ndarray
+            Predicted visibilities
+        """
+        if use_jax and not JAX_AVAILABLE:
+            warnings.warn("JAX not available, falling back to NumPy")
+            use_jax = False
+
+        xp = jnp if use_jax else np
+
+        # Transfer all to arrays
+        vis_pred = xp.asarray(model_vis, dtype=xp.complex128)
+        freqs = xp.asarray(frequencies)
+        ant1 = xp.asarray(antenna1, dtype=xp.int32)
+        ant2 = xp.asarray(antenna2, dtype=xp.int32)
+
+        n_row, n_chan, n_corr = vis_pred.shape
+
+        # Apply effects in order: K → B → G → D
+        for effect_name in ['K', 'B', 'G', 'D']:
+            if effect_name not in params:
+                continue
+
+            p = xp.asarray(params[effect_name])
+
+            if effect_name == 'K':
+                # Match corruption: phase = 2π * (τ1 - τ2) * freq
+                # ref_freq=0 to match _corrupt_batch_vectorized_delays
+                delay_diff = p[ant1] - p[ant2]
+                phase = 2 * xp.pi * xp.outer(delay_diff, freqs)
+                vis_pred = vis_pred * xp.exp(1j * phase)[:, :, None]
+
+            elif effect_name == 'G':
+                g = p[0] if p.ndim == 3 else p
+                g1, g2 = g[ant1], g[ant2]
+                if n_corr == 4:
+                    gf = xp.stack([g1[:,0]*xp.conj(g2[:,0]), g1[:,0]*xp.conj(g2[:,1]),
+                                   g1[:,1]*xp.conj(g2[:,0]), g1[:,1]*xp.conj(g2[:,1])], axis=1)
+                else:
+                    gf = xp.stack([g1[:,0]*xp.conj(g2[:,0]), g1[:,1]*xp.conj(g2[:,1])], axis=1)
+                vis_pred = vis_pred * gf[:, None, :]
+
+            elif effect_name == 'B':
+                bp1, bp2 = p[ant1], p[ant2]
+                if n_corr == 4:
+                    bf = xp.stack([bp1[:,:,0]*xp.conj(bp2[:,:,0]), bp1[:,:,0]*xp.conj(bp2[:,:,1]),
+                                   bp1[:,:,1]*xp.conj(bp2[:,:,0]), bp1[:,:,1]*xp.conj(bp2[:,:,1])], axis=2)
+                else:
+                    bf = xp.stack([bp1[:,:,0]*xp.conj(bp2[:,:,0]), bp1[:,:,1]*xp.conj(bp2[:,:,1])], axis=2)
+                vis_pred = vis_pred * bf
+
+            elif effect_name == 'D' and n_corr == 4:
+                d1, d2 = p[ant1], p[ant2]
+                v = vis_pred
+                vis_pred = xp.stack([
+                    v[:,:,0] + d1[:,0:1]*v[:,:,2] + xp.conj(d2[:,0:1])*v[:,:,1],
+                    v[:,:,1] + d1[:,0:1]*v[:,:,3] + xp.conj(d2[:,1:2])*v[:,:,0],
+                    v[:,:,2] + d1[:,1:2]*v[:,:,0] + xp.conj(d2[:,0:1])*v[:,:,3],
+                    v[:,:,3] + d1[:,1:2]*v[:,:,1] + xp.conj(d2[:,1:2])*v[:,:,2]
+                ], axis=2)
+
+        return np.asarray(vis_pred) if use_jax else vis_pred
 
     def list_effects(self) -> List[str]:
         """Get list of active effect names."""
