@@ -5,6 +5,7 @@ import sys
 from typing import Callable, Dict, Optional
 
 import numpy as np
+
 from .casa_interface import MeasurementSetHandler
 from .effects import BandpassDelay
 from .simulator import JonesSimulator

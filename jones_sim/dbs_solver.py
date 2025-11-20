@@ -11,17 +11,17 @@ This module:
 NO PLOTTING - that's in bayesian_delay_plotter.py
 """
 
+import logging
+import pickle
+from collections import defaultdict
+
 import arviz as az
 import casatools
 import numpy as np
 import pymc as pm
 import pytensor.tensor as pt
+
 from .casa_interface import MeasurementSetHandler
-from .simulator import Simulator
-from collections import defaultdict
-from typing import Optional
-import pickle
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ try:
     import jax
     import jax.numpy as jnp
     from pytensor.link.jax.dispatch import jax_funcify
+
     JAX_AVAILABLE = True
 except ImportError:
     JAX_AVAILABLE = False
@@ -384,11 +385,11 @@ class BayesianDelaySampler:
         print(f"Likelihood: Complex Gaussian with σ={self.thermal_noise_sigma:.5f} Jy")
 
         if use_blackjax:
-            print(f"Sampler: BlackJAX/NUTS")
+            print("Sampler: BlackJAX/NUTS")
         elif use_numpyro:
-            print(f"Sampler: NumPyro/NUTS")
+            print("Sampler: NumPyro/NUTS")
         else:
-            print(f"Sampler: PyMC/NUTS")
+            print("Sampler: PyMC/NUTS")
 
     def sample(self, draws=2000, tune=3000, chains=4, target_accept=0.9):
         """Sample from the posterior.
@@ -463,7 +464,7 @@ class BayesianDelaySampler:
 
         # Save trace
         self.trace.to_netcdf(filename)
-        print(f"✓ Trace saved")
+        print("✓ Trace saved")
 
         # Also save metadata as pickle for easy loading
         metadata = {
@@ -597,7 +598,7 @@ def run(
     print(f"{'=' * 70}")
     print(f"Trace saved to: {output_file}")
     print(f"Metadata saved to: {output_file.replace('.nc', '_metadata.pkl')}")
-    print(f"\nNext step:")
+    print("\nNext step:")
     print(f"  python bayesian_delay_plotter.py {output_file}")
 
     return sampler

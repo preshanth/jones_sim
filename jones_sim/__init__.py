@@ -88,12 +88,12 @@ if MS_CALIBRATION_AVAILABLE:
 
 # Delay solver (requires CASA and PyMC)
 try:
-    from .dbs_solver import BayesianDelaySampler, run as run_delay_solver  # noqa: F401
     from .corrupt_delay import corrupt_ms_with_delays  # noqa: F401
+    from .dbs_solver import BayesianDelaySampler  # noqa: F401
+
+    # from .dbs_solver import run as run_delay_solver
 
     DELAY_SOLVER_AVAILABLE = True
-    __all__.extend(
-        ["BayesianDelaySampler", "run_delay_solver", "corrupt_ms_with_delays"]
-    )
+    __all__.extend(["BayesianDelaySampler", "corrupt_ms_with_delays"])
 except ImportError:
     DELAY_SOLVER_AVAILABLE = False

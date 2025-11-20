@@ -7,6 +7,7 @@ import numpy as np
 
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -14,7 +15,7 @@ except ImportError:
 
 try:
     import jax.numpy as jnp
-    import jax
+
     JAX_AVAILABLE = True
 except ImportError:
     JAX_AVAILABLE = False
@@ -353,7 +354,7 @@ class JonesSimulator:
         # For GPU path, we only support array (per-antenna delays)
         tau_xx = delay_effect.tau_xx
         tau_yy = delay_effect.tau_yy
-        ref_freq = getattr(delay_effect, 'ref_freq', 0.0)
+        ref_freq = getattr(delay_effect, "ref_freq", 0.0)
 
         # Convert to arrays if scalar
         if not isinstance(tau_xx, np.ndarray):
@@ -443,47 +444,81 @@ class JonesSimulator:
         n_row, n_chan, n_corr = vis_pred.shape
 
         # Apply effects in order: K → B → G → D
-        for effect_name in ['K', 'B', 'G', 'D']:
+        for effect_name in ["K", "B", "G", "D"]:
             if effect_name not in params:
                 continue
 
             p = xp.asarray(params[effect_name])
 
-            if effect_name == 'K':
+            if effect_name == "K":
                 # Match corruption: phase = 2π * (τ1 - τ2) * freq
                 # ref_freq=0 to match _corrupt_batch_vectorized_delays
                 delay_diff = p[ant1] - p[ant2]
                 phase = 2 * xp.pi * xp.outer(delay_diff, freqs)
                 vis_pred = vis_pred * xp.exp(1j * phase)[:, :, None]
 
-            elif effect_name == 'G':
+            elif effect_name == "G":
                 g = p[0] if p.ndim == 3 else p
                 g1, g2 = g[ant1], g[ant2]
                 if n_corr == 4:
-                    gf = xp.stack([g1[:,0]*xp.conj(g2[:,0]), g1[:,0]*xp.conj(g2[:,1]),
-                                   g1[:,1]*xp.conj(g2[:,0]), g1[:,1]*xp.conj(g2[:,1])], axis=1)
+                    gf = xp.stack(
+                        [
+                            g1[:, 0] * xp.conj(g2[:, 0]),
+                            g1[:, 0] * xp.conj(g2[:, 1]),
+                            g1[:, 1] * xp.conj(g2[:, 0]),
+                            g1[:, 1] * xp.conj(g2[:, 1]),
+                        ],
+                        axis=1,
+                    )
                 else:
-                    gf = xp.stack([g1[:,0]*xp.conj(g2[:,0]), g1[:,1]*xp.conj(g2[:,1])], axis=1)
+                    gf = xp.stack(
+                        [g1[:, 0] * xp.conj(g2[:, 0]), g1[:, 1] * xp.conj(g2[:, 1])],
+                        axis=1,
+                    )
                 vis_pred = vis_pred * gf[:, None, :]
 
-            elif effect_name == 'B':
+            elif effect_name == "B":
                 bp1, bp2 = p[ant1], p[ant2]
                 if n_corr == 4:
-                    bf = xp.stack([bp1[:,:,0]*xp.conj(bp2[:,:,0]), bp1[:,:,0]*xp.conj(bp2[:,:,1]),
-                                   bp1[:,:,1]*xp.conj(bp2[:,:,0]), bp1[:,:,1]*xp.conj(bp2[:,:,1])], axis=2)
+                    bf = xp.stack(
+                        [
+                            bp1[:, :, 0] * xp.conj(bp2[:, :, 0]),
+                            bp1[:, :, 0] * xp.conj(bp2[:, :, 1]),
+                            bp1[:, :, 1] * xp.conj(bp2[:, :, 0]),
+                            bp1[:, :, 1] * xp.conj(bp2[:, :, 1]),
+                        ],
+                        axis=2,
+                    )
                 else:
-                    bf = xp.stack([bp1[:,:,0]*xp.conj(bp2[:,:,0]), bp1[:,:,1]*xp.conj(bp2[:,:,1])], axis=2)
+                    bf = xp.stack(
+                        [
+                            bp1[:, :, 0] * xp.conj(bp2[:, :, 0]),
+                            bp1[:, :, 1] * xp.conj(bp2[:, :, 1]),
+                        ],
+                        axis=2,
+                    )
                 vis_pred = vis_pred * bf
 
-            elif effect_name == 'D' and n_corr == 4:
+            elif effect_name == "D" and n_corr == 4:
                 d1, d2 = p[ant1], p[ant2]
                 v = vis_pred
-                vis_pred = xp.stack([
-                    v[:,:,0] + d1[:,0:1]*v[:,:,2] + xp.conj(d2[:,0:1])*v[:,:,1],
-                    v[:,:,1] + d1[:,0:1]*v[:,:,3] + xp.conj(d2[:,1:2])*v[:,:,0],
-                    v[:,:,2] + d1[:,1:2]*v[:,:,0] + xp.conj(d2[:,0:1])*v[:,:,3],
-                    v[:,:,3] + d1[:,1:2]*v[:,:,1] + xp.conj(d2[:,1:2])*v[:,:,2]
-                ], axis=2)
+                vis_pred = xp.stack(
+                    [
+                        v[:, :, 0]
+                        + d1[:, 0:1] * v[:, :, 2]
+                        + xp.conj(d2[:, 0:1]) * v[:, :, 1],
+                        v[:, :, 1]
+                        + d1[:, 0:1] * v[:, :, 3]
+                        + xp.conj(d2[:, 1:2]) * v[:, :, 0],
+                        v[:, :, 2]
+                        + d1[:, 1:2] * v[:, :, 0]
+                        + xp.conj(d2[:, 0:1]) * v[:, :, 3],
+                        v[:, :, 3]
+                        + d1[:, 1:2] * v[:, :, 1]
+                        + xp.conj(d2[:, 1:2]) * v[:, :, 2],
+                    ],
+                    axis=2,
+                )
 
         return np.asarray(vis_pred) if use_jax else vis_pred
 

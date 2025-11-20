@@ -10,11 +10,11 @@ This module:
 Run after bayesian_delay_sampler.py
 """
 
+import pickle
+
 import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
-from typing import Optional
 
 
 class BayesianDelayPlotter:
@@ -558,7 +558,7 @@ class BayesianDelayPlotter:
         plt.close()
 
         # Print statistics
-        print(f"\nResidual Statistics:")
+        print("\nResidual Statistics:")
         print(f"  Real std before:  {std_real_before:.5f} Jy")
         print(f"  Real std after:   {std_real_after:.5f} Jy")
         print(f"  Imag std before:  {std_imag_before:.5f} Jy")

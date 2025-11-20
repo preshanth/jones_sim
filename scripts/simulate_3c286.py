@@ -21,13 +21,13 @@ Options:
 After creation, run setjy to get proper 3C286 flux model.
 """
 
-import os
 import argparse
-import numpy as np
+import os
 
-from casatools import componentlist, quanta, simulator, measures, table
-from casatasks import ft, flagdata, setjy
+import numpy as np
+from casatasks import flagdata, ft, setjy
 from casatasks.private import simutil
+from casatools import componentlist, measures, quanta, simulator, table
 
 
 def find_antenna_config():
@@ -54,17 +54,19 @@ def find_antenna_config():
     # Try casatools to get data path
     try:
         import casatools
+
         casa_data = casatools.ctsys.resolve("alma/simmos/vla.d.cfg")
         if os.path.exists(casa_data):
             return casa_data
-    except:
-        pass
+    except Exception as e:
+        print(f"casatools not available or unable to resolve CASA data path: {e}")
 
     for path in possible_paths:
         if path and os.path.exists(path):
             return path
 
     return None
+
 
 # CASA tools
 tb = table()
@@ -75,17 +77,17 @@ me = measures()
 mysu = simutil.simutil()
 
 # 3C286 position (J2000)
-SOURCE_RA = '13h31m08.288s'
-SOURCE_DEC = '+30d30m32.96s'
-SOURCE_NAME = '3C286'
+SOURCE_RA = "13h31m08.288s"
+SOURCE_DEC = "+30d30m32.96s"
+SOURCE_NAME = "3C286"
 
 # Frequency setup
 FREQ_START = 1.0e9  # 1 GHz
-FREQ_END = 2.0e9    # 2 GHz
-REF_FREQ = 1.5e9    # Center frequency
+FREQ_END = 2.0e9  # 2 GHz
+REF_FREQ = 1.5e9  # Center frequency
 
 
-def create_componentlist(flux_jy: float = 17.0, clname: str = 'temp_3c286.cl'):
+def create_componentlist(flux_jy: float = 17.0, clname: str = "temp_3c286.cl"):
     """Create component list for 3C286.
 
     Args:
@@ -95,17 +97,17 @@ def create_componentlist(flux_jy: float = 17.0, clname: str = 'temp_3c286.cl'):
     Returns:
         Path to component list
     """
-    os.system(f'rm -rf {clname}')
+    os.system(f"rm -rf {clname}")
     cl.done()
 
     cl.addcomponent(
-        dir=f'J2000 {SOURCE_RA} {SOURCE_DEC}',
+        dir=f"J2000 {SOURCE_RA} {SOURCE_DEC}",
         flux=flux_jy,
-        fluxunit='Jy',
-        freq=f'{REF_FREQ/1e9}GHz',
-        shape='point',
-        spectrumtype='spectral index',
-        index=0  # Flat spectrum initially, setjy will fix
+        fluxunit="Jy",
+        freq=f"{REF_FREQ/1e9}GHz",
+        shape="point",
+        spectrumtype="spectral index",
+        index=0,  # Flat spectrum initially, setjy will fix
     )
 
     cl.rename(clname)
@@ -115,7 +117,7 @@ def create_componentlist(flux_jy: float = 17.0, clname: str = 'temp_3c286.cl'):
 
 
 def create_ms(
-    msname: str = 'sim_3c286.ms',
+    msname: str = "sim_3c286.ms",
     n_channels: int = 64,
     obs_time_min: float = 5.0,
     int_time_sec: float = 2.0,
@@ -137,7 +139,7 @@ def create_ms(
     print("CREATING MEASUREMENT SET")
     print(f"{'=' * 70}")
 
-    os.system(f'rm -rf {msname}')
+    os.system(f"rm -rf {msname}")
     sm.open(ms=msname)
 
     # VLA D-config
@@ -161,42 +163,42 @@ def create_ms(
         y=np.array(y),
         z=np.array(z),
         dishdiameter=np.array(d),
-        mount=['alt-az'],
+        mount=["alt-az"],
         antname=np.array(an).tolist(),
-        coordsystem='global',
-        referencelocation=me.observatory('VLA')
+        coordsystem="global",
+        referencelocation=me.observatory("VLA"),
     )
 
     # Pointing center = source position
-    dir_pointing = me.direction('J2000', SOURCE_RA, SOURCE_DEC)
+    dir_pointing = me.direction("J2000", SOURCE_RA, SOURCE_DEC)
 
     # Feed setup - circular polarization for VLA
-    sm.setfeed(mode='perfect R L', pol=[''])
+    sm.setfeed(mode="perfect R L", pol=[""])
 
     # Spectral window
     # Total bandwidth
     total_bw = FREQ_END - FREQ_START  # 1 GHz
     chan_width = total_bw / n_channels
 
-    print(f"\nSpectral setup:")
+    print("\nSpectral setup:")
     print(f"  Frequency range: {FREQ_START/1e9:.1f} - {FREQ_END/1e9:.1f} GHz")
     print(f"  Channels: {n_channels}")
     print(f"  Channel width: {chan_width/1e6:.3f} MHz")
 
     sm.setspwindow(
         spwname="LBand",
-        freq=f'{FREQ_START}Hz',
-        deltafreq=f'{chan_width}Hz',
-        freqresolution=f'{chan_width}Hz',
+        freq=f"{FREQ_START}Hz",
+        deltafreq=f"{chan_width}Hz",
+        freqresolution=f"{chan_width}Hz",
         nchannels=n_channels,
-        stokes='RR RL LR LL'  # Full polarization
+        stokes="RR RL LR LL",  # Full polarization
     )
 
     # Field
     sm.setfield(sourcename=SOURCE_NAME, sourcedirection=dir_pointing)
 
     # Limits
-    sm.setlimits(shadowlimit=0.01, elevationlimit='1deg')
+    sm.setlimits(shadowlimit=0.01, elevationlimit="1deg")
     sm.setauto(autocorrwt=0.0)
 
     # Time setup
@@ -205,29 +207,29 @@ def create_ms(
     ha_start = -obs_time_hr / 2.0
     ha_end = obs_time_hr / 2.0
 
-    print(f"\nTime setup:")
+    print("\nTime setup:")
     print(f"  Observation time: {obs_time_min:.1f} min")
     print(f"  Integration time: {int_time_sec:.1f} s")
     print(f"  Hour angle range: {ha_start:.3f} to {ha_end:.3f} hr")
 
     sm.settimes(
-        integrationtime=f'{int_time_sec}s',
+        integrationtime=f"{int_time_sec}s",
         usehourangle=True,
-        referencetime=me.epoch('UTC', '2020/10/4/00:00:00')
+        referencetime=me.epoch("UTC", "2020/10/4/00:00:00"),
     )
 
     # Observe
     sm.observe(
         sourcename=SOURCE_NAME,
         spwname="LBand",
-        starttime=f'{ha_start}h',
-        stoptime=f'{ha_end}h'
+        starttime=f"{ha_start}h",
+        stoptime=f"{ha_end}h",
     )
 
     sm.close()
 
     # Unflag all data
-    flagdata(vis=msname, mode='unflag')
+    flagdata(vis=msname, mode="unflag")
 
     print(f"\n✓ Empty MS created: {msname}")
 
@@ -245,11 +247,11 @@ def predict_visibilities(msname: str, clname: str):
     print("PREDICTING VISIBILITIES")
     print(f"{'=' * 70}")
 
-    ft(vis=msname, model='', complist=clname, usescratch=True, nterms=1)
+    ft(vis=msname, model="", complist=clname, usescratch=True, nterms=1)
 
     # Copy MODEL_DATA to DATA
     tb.open(msname, nomodify=False)
-    tb.putcol('DATA', tb.getcol('MODEL_DATA'))
+    tb.putcol("DATA", tb.getcol("MODEL_DATA"))
     tb.close()
 
     print("✓ Visibilities predicted and copied to DATA column")
@@ -269,8 +271,8 @@ def apply_setjy(msname: str):
     result = setjy(
         vis=msname,
         field=SOURCE_NAME,
-        standard='Perley-Butler 2017',
-        model='',
+        standard="Perley-Butler 2017",
+        model="",
         usescratch=True,
         scalebychan=True,
     )
@@ -279,19 +281,19 @@ def apply_setjy(msname: str):
 
     # Copy updated MODEL_DATA to DATA
     tb.open(msname, nomodify=False)
-    model_data = tb.getcol('MODEL_DATA')
-    tb.putcol('DATA', model_data)
+    model_data = tb.getcol("MODEL_DATA")
+    tb.putcol("DATA", model_data)
     tb.close()
 
     # Report flux values
     print("\nFlux density per channel (sample):")
     tb.open(msname)
-    model = tb.getcol('MODEL_DATA')
+    model = tb.getcol("MODEL_DATA")
     tb.close()
 
     # Get mean amplitude for first few channels
     n_chan = model.shape[1]
-    for i in [0, n_chan//4, n_chan//2, 3*n_chan//4, n_chan-1]:
+    for i in [0, n_chan // 4, n_chan // 2, 3 * n_chan // 4, n_chan - 1]:
         amp = np.mean(np.abs(model[0, i, :]))  # RR
         freq = FREQ_START + i * (FREQ_END - FREQ_START) / n_chan
         print(f"  Chan {i} ({freq/1e9:.3f} GHz): {amp:.3f} Jy")
@@ -311,10 +313,10 @@ def get_ms_summary(msname: str):
 
     tb.open(msname)
     n_rows = tb.nrows()
-    ant1 = tb.getcol('ANTENNA1')
-    ant2 = tb.getcol('ANTENNA2')
-    data = tb.getcol('DATA')
-    times = tb.getcol('TIME')
+    ant1 = tb.getcol("ANTENNA1")
+    ant2 = tb.getcol("ANTENNA2")
+    data = tb.getcol("DATA")
+    times = tb.getcol("TIME")
     tb.close()
 
     n_baselines = len(np.unique(list(zip(ant1, ant2)), axis=0))
@@ -331,14 +333,14 @@ def get_ms_summary(msname: str):
 
     # Data statistics
     amp = np.abs(data)
-    print(f"\nData amplitude statistics:")
+    print("\nData amplitude statistics:")
     print(f"  Mean: {np.mean(amp):.3f} Jy")
     print(f"  Min: {np.min(amp):.3f} Jy")
     print(f"  Max: {np.max(amp):.3f} Jy")
 
 
 def simulate_3c286(
-    msname: str = 'sim_3c286.ms',
+    msname: str = "sim_3c286.ms",
     n_channels: int = 64,
     obs_time_min: float = 5.0,
     int_time_sec: float = 2.0,
@@ -385,50 +387,45 @@ def simulate_3c286(
     get_ms_summary(msname)
 
     # Cleanup
-    os.system(f'rm -rf {clname}')
+    os.system(f"rm -rf {clname}")
 
     print(f"\n{'=' * 70}")
     print("✓ SIMULATION COMPLETE")
     print(f"{'=' * 70}")
     print(f"MS: {msname}")
-    print(f"MODEL_DATA: 3C286 flux from Perley-Butler 2017")
-    print(f"DATA: Copy of MODEL_DATA (clean, no corruption)")
-    print(f"\nNext step: Corrupt DATA with delays using corrupt_delay.py")
+    print("MODEL_DATA: 3C286 flux from Perley-Butler 2017")
+    print("DATA: Copy of MODEL_DATA (clean, no corruption)")
+    print("\nNext step: Corrupt DATA with delays using corrupt_delay.py")
 
     return msname
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Simulate VLA observation of 3C286"
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Simulate VLA observation of 3C286")
+    parser.add_argument(
+        "--msname",
+        default="sim_3c286.ms",
+        help="Output MS name (default: sim_3c286.ms)",
     )
     parser.add_argument(
-        '--msname',
-        default='sim_3c286.ms',
-        help='Output MS name (default: sim_3c286.ms)'
+        "--n_channels", type=int, default=64, help="Number of channels (default: 64)"
     )
     parser.add_argument(
-        '--n_channels',
-        type=int,
-        default=64,
-        help='Number of channels (default: 64)'
-    )
-    parser.add_argument(
-        '--obs_time',
+        "--obs_time",
         type=float,
         default=5.0,
-        help='Observation time in minutes (default: 5)'
+        help="Observation time in minutes (default: 5)",
     )
     parser.add_argument(
-        '--int_time',
+        "--int_time",
         type=float,
         default=2.0,
-        help='Integration time in seconds (default: 2)'
+        help="Integration time in seconds (default: 2)",
     )
     parser.add_argument(
-        '--antconfig',
+        "--antconfig",
         default=None,
-        help='Antenna config file (default: auto-detect from ~/.casa/data)'
+        help="Antenna config file (default: auto-detect from ~/.casa/data)",
     )
 
     args = parser.parse_args()

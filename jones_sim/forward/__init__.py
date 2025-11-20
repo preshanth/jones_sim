@@ -12,10 +12,10 @@ Components:
 - plotting: Legacy Bokeh plotting utilities
 """
 
-from .mc_sampler import GainMCSampler
 from .bandpass_sampler import BandpassMCSampler
-from .unified_sampler import JonesMCSampler
+from .mc_sampler import GainMCSampler
 from .unified_plotter import JonesPlotter
+from .unified_sampler import JonesMCSampler
 
 __all__ = [
     "GainMCSampler",
