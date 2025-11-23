@@ -5,6 +5,7 @@ __version__ = "0.1.0"
 # Core simulation components
 # Calibration solver
 from .antsol import AntSolSolver, solve_gains_from_ms
+from .config import JonesConfig, load_config
 from .effects import (
     BandpassDelay,
     CrosshandPhase,
@@ -51,6 +52,9 @@ __all__ = [
     # Simulation
     "JonesSimulator",
     "VisibilityGenerator",
+    # Configuration
+    "JonesConfig",
+    "load_config",
     # Effects
     "ParallacticAngle",
     "ElectronicGains",

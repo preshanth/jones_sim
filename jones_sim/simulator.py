@@ -14,18 +14,25 @@ except ImportError:
     cp = None
 
 try:
+    import jax
     import jax.numpy as jnp
 
     JAX_AVAILABLE = True
 except ImportError:
     JAX_AVAILABLE = False
     jnp = None
+    jax = None
 
 
 class JonesSimulator:
     """Jones matrix coordinator with GPU acceleration."""
 
-    def __init__(self):
+    def __init__(self, gpu_device: int = 0):
+        """Initialize Jones simulator.
+
+        Args:
+            gpu_device: GPU device ID to use (default: 0)
+        """
         self.effects: Dict[str, Any] = {}
         self.effect_order = [
             "parallactic",
@@ -37,6 +44,79 @@ class JonesSimulator:
             "rl_delay",
             "crosshand_phase",
         ]
+        self.gpu_device = gpu_device
+        self._gpu_initialized = False
+
+    def _initialize_gpu(self, use_gpu: bool) -> bool:
+        """Initialize GPU device if needed.
+
+        Args:
+            use_gpu: Whether GPU is requested
+
+        Returns:
+            bool: True if GPU is available and initialized
+        """
+        if not use_gpu:
+            return False
+
+        if not CUPY_AVAILABLE:
+            warnings.warn("CuPy not available, falling back to CPU")
+            return False
+
+        if self._gpu_initialized:
+            return True
+
+        # Set GPU device
+        try:
+            n_devices = cp.cuda.runtime.getDeviceCount()
+            if self.gpu_device >= n_devices:
+                warnings.warn(
+                    f"GPU device {self.gpu_device} not available "
+                    f"(only {n_devices} devices found). Using device 0."
+                )
+                self.gpu_device = 0
+
+            cp.cuda.Device(self.gpu_device).use()
+            self._gpu_initialized = True
+            return True
+        except Exception as e:
+            warnings.warn(f"Failed to initialize GPU device {self.gpu_device}: {e}")
+            return False
+
+    @staticmethod
+    def get_available_gpus() -> int:
+        """Get number of available GPUs.
+
+        Returns:
+            Number of available GPU devices
+        """
+        if not CUPY_AVAILABLE:
+            return 0
+        try:
+            return cp.cuda.runtime.getDeviceCount()
+        except Exception:
+            return 0
+
+    @staticmethod
+    def configure_jax_gpu(device_id: int = 0) -> bool:
+        """Configure JAX to use specific GPU.
+
+        Args:
+            device_id: GPU device ID
+
+        Returns:
+            bool: True if JAX GPU configured successfully
+        """
+        if not JAX_AVAILABLE:
+            return False
+
+        try:
+            # Set JAX to use specific GPU
+            jax.config.update("jax_default_device", jax.devices("gpu")[device_id])
+            return True
+        except (IndexError, RuntimeError) as e:
+            warnings.warn(f"Failed to configure JAX GPU {device_id}: {e}")
+            return False
 
     def add_effect(self, name: str, effect_instance):
         """Add an effect instance to the simulator."""
@@ -105,9 +185,8 @@ class JonesSimulator:
         n_vis = len(ideal_visibilities)
         corrupted = np.zeros_like(ideal_visibilities)
 
-        if use_gpu and not CUPY_AVAILABLE:
-            warnings.warn("CuPy not available, falling back to CPU")
-            use_gpu = False
+        # Initialize GPU if requested
+        use_gpu = self._initialize_gpu(use_gpu)
 
         # Set random seed if provided
         if noise_params is not None and "seed" in noise_params:
