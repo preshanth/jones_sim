@@ -26,6 +26,9 @@ pip install jones_sim[plotting]
 # With Monte Carlo sampling (PyMC)
 pip install jones_sim[mcmc]
 
+# With Simulation-Based Inference (SBI)
+pip install jones_sim[sbi]
+
 # With CASA integration
 pip install jones_sim[casa]
 
@@ -43,7 +46,8 @@ pip install -e .[dev]
 - **Visibility corruption** - Apply Jones matrices to corrupt ideal visibilities
 - **Source models** - Unpolarized, linear, circular, and rotation measure sources
 - **Interactive plots** (optional) - Bokeh visualizations
-- **MCMC sampling** (optional) - PyMC-based parameter estimation
+- **MCMC sampling** (optional) - PyMC/NumPyro-based parameter estimation
+- **Simulation-Based Inference** (optional) - Neural posterior estimation for fast calibration with uncertainties
 - **CASA interface** (optional) - Read/write measurement sets and calibration tables
 
 ## Quick Start
@@ -64,8 +68,37 @@ sim.add_effect('gains', ElectronicGains(n_antennas=10))
 J = sim.compute_jones_matrix(freq=1.4e9, time=0.0, antenna_id=0)
 ```
 
+## SBI Quick Start (NEW!)
+
+Solve for bandpass calibration with **uncertainty quantification**:
+
+```python
+from jones_sim.sbi_solver import BandpassSBISimulator, SBICalibrationSolver
+from jones_sim.solvable_effects import BandpassEffect
+
+# Setup simulator
+simulator = BandpassSBISimulator(
+    effect=BandpassEffect(),
+    visibility_model=your_vis_model,
+    n_antennas=4,
+    n_channels=16,
+)
+
+# Train neural network (once)
+solver = SBICalibrationSolver(simulator, n_rounds=2)
+solver.train(n_simulations=10000)
+
+# Infer with uncertainties (fast!)
+samples, summary = solver.infer(observed_visibilities)
+print(f"Bandpass gain = {summary['mean'][0]:.3f} ± {summary['std'][0]:.3f}")
+# Output: Bandpass gain = 1.210 ± 0.052
+```
+
+See [docs/SBI_GUIDE.md](docs/SBI_GUIDE.md) for complete documentation.
+
 ## Documentation
 
+- [docs/SBI_GUIDE.md](docs/SBI_GUIDE.md) - Simulation-Based Inference guide
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide and local testing
 - [docs/](docs/) - API documentation, testing strategy, and algorithm details
 
