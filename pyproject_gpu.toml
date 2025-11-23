@@ -1,0 +1,140 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jones_sim"
+version = "0.1.0"
+description = "Forward modeling of radio interferometric visibilities using Jones matrix formalism"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+    "sympy",
+    "numpy",
+    "scipy",
+]
+
+[project.optional-dependencies]
+plotting = [
+    "bokeh",
+    "matplotlib",
+]
+
+# GPU-compatible MCMC stack for CUDA 12.x
+mcmc = [
+    "pymc>=5.10.0",
+    "pytensor>=2.18.0",
+    "arviz>=0.18.0",
+    # JAX with CUDA 12 support (compatible with NumPyro)
+    "jax[cuda12]>=0.4.35",
+    # NumPyro with JAX 0.4.35+ support
+    "numpyro>=0.15.3",
+]
+
+# GPU-compatible SBI stack for CUDA 12.x
+sbi = [
+    "sbi>=0.22.0",
+    # PyTorch with CUDA 12.x (user already has 2.5.1 working)
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    # JAX with CUDA 12 support (shared with MCMC)
+    "jax[cuda12]>=0.4.35",
+]
+
+# Combined: All GPU dependencies working together
+gpu = [
+    # PyTorch stack
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "sbi>=0.22.0",
+    # JAX stack (shared by NumPyro and SBI simulator)
+    "jax[cuda12]>=0.4.35",
+    "numpyro>=0.15.3",
+    # PyMC stack
+    "pymc>=5.10.0",
+    "pytensor>=2.18.0",
+    "arviz>=0.18.0",
+]
+
+casa = [
+    "casatools",
+    "casatasks",
+]
+
+all = [
+    "bokeh",
+    "matplotlib",
+    "pymc>=5.10.0",
+    "pytensor>=2.18.0",
+    "arviz>=0.18.0",
+    "jax[cuda12]>=0.4.35",
+    "numpyro>=0.15.3",
+    "sbi>=0.22.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+]
+
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+    "black",
+    "ruff",
+    "bokeh",
+    "matplotlib",
+    "pymc>=5.10.0",
+    "pytensor>=2.18.0",
+    "arviz>=0.18.0",
+    "jax[cuda12]>=0.4.35",
+    "numpyro>=0.15.3",
+    "sbi>=0.22.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["jones_sim*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+]
+ignore = [
+    "E501",  # line-too-long (let black handle formatting)
+    "E741",  # ambiguous-variable-name (I, Q, U, V are Stokes parameters)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["jones_sim"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "end_to_end: marks tests as end-to-end integration tests",
+    "requires_casa: marks tests that require CASA tools installation",
+    "integration: marks tests as integration tests",
+]
