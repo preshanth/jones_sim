@@ -37,10 +37,10 @@ mcmc = [
     "pymc>=5.10.0",
     "pytensor>=2.18.0",
     "arviz>=0.18.0",
-    # JAX with CUDA 12 support (compatible with NumPyro)
-    "jax[cuda12]>=0.4.35",
-    # NumPyro with JAX 0.4.35+ support
-    "numpyro>=0.15.3",
+    # JAX with CUDA 12 support (cudnn91 for GTX 1080 Ti compatibility)
+    "jax[cuda12]>=0.4.29,<0.4.36",
+    # NumPyro compatible with JAX 0.4.29
+    "numpyro>=0.15.0,<0.16.0",
 ]
 
 # GPU-compatible SBI stack for CUDA 12.x
@@ -50,7 +50,7 @@ sbi = [
     "torch>=2.0.0",
     "torchvision>=0.15.0",
     # JAX with CUDA 12 support (shared with MCMC)
-    "jax[cuda12]>=0.4.35",
+    "jax[cuda12]>=0.4.29,<0.4.36",
 ]
 
 # Combined: All GPU dependencies working together
@@ -60,8 +60,8 @@ gpu = [
     "torchvision>=0.15.0",
     "sbi>=0.22.0",
     # JAX stack (shared by NumPyro and SBI simulator)
-    "jax[cuda12]>=0.4.35",
-    "numpyro>=0.15.3",
+    "jax[cuda12]>=0.4.29,<0.4.36",
+    "numpyro>=0.15.0,<0.16.0",
     # PyMC stack
     "pymc>=5.10.0",
     "pytensor>=2.18.0",
@@ -79,8 +79,8 @@ all = [
     "pymc>=5.10.0",
     "pytensor>=2.18.0",
     "arviz>=0.18.0",
-    "jax[cuda12]>=0.4.35",
-    "numpyro>=0.15.3",
+    "jax[cuda12]>=0.4.29,<0.4.36",
+    "numpyro>=0.15.0,<0.16.0",
     "sbi>=0.22.0",
     "torch>=2.0.0",
     "torchvision>=0.15.0",
@@ -97,8 +97,8 @@ dev = [
     "pymc>=5.10.0",
     "pytensor>=2.18.0",
     "arviz>=0.18.0",
-    "jax[cuda12]>=0.4.35",
-    "numpyro>=0.15.3",
+    "jax[cuda12]>=0.4.29,<0.4.36",
+    "numpyro>=0.15.0,<0.16.0",
     "sbi>=0.22.0",
     "torch>=2.0.0",
     "torchvision>=0.15.0",

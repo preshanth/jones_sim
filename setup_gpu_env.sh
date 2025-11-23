@@ -27,12 +27,12 @@ pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorc
 
 echo ""
 echo "Step 4: Installing JAX with CUDA 12..."
-# Install JAX with CUDA 12 support (compatible with NumPyro)
-pip install jax[cuda12]==0.4.35 jaxlib==0.4.35+cuda12.cudnn92 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+# Install JAX with CUDA 12 support (compatible with NumPyro and your cudnn 9.1)
+pip install "jax[cuda12]==0.4.29" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 echo ""
 echo "Step 5: Installing NumPyro..."
-pip install numpyro==0.15.3
+pip install numpyro==0.15.0
 
 echo ""
 echo "Step 6: Installing SBI..."
