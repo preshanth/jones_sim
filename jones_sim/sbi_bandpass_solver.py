@@ -399,8 +399,17 @@ class SBIBandpassSolver:
                 theta = self.prior.sample((n_simulations,))
             else:
                 # For round 2+, sample from posterior conditioned on pilot observation
+                # Use fewer samples since posterior is focused (more efficient)
+                n_proposal = min(n_simulations, 1000)
+                logger.info(f"Sampling {n_proposal} proposal samples from posterior...")
                 pilot_obs_tensor = torch.tensor(pilot_observation, dtype=torch.float32)
-                theta = self.posterior.sample((n_simulations,), x=pilot_obs_tensor)
+                theta = self.posterior.sample((n_proposal,), x=pilot_obs_tensor)
+
+                # If we need more, pad with prior samples (mixed proposal)
+                if n_proposal < n_simulations:
+                    logger.info(f"Mixing with {n_simulations - n_proposal} prior samples...")
+                    theta_prior = self.prior.sample((n_simulations - n_proposal,))
+                    theta = torch.cat([theta, theta_prior], dim=0)
 
             # Run simulations
             logger.info(f"Running {n_simulations} simulations...")
