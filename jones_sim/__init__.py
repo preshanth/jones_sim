@@ -56,7 +56,10 @@ __all__ = [
     # Configuration
     "JonesConfig",
     "load_config",
+<<<<<<< HEAD
     "configure_jax",
+=======
+>>>>>>> ad71c50 (Add JSON configuration system and fix GPU device management)
     # Effects
     "ParallacticAngle",
     "ElectronicGains",
