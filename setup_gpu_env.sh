@@ -44,7 +44,9 @@ pip install pymc==5.18.0 pytensor==2.25.5 arviz==0.20.0
 
 echo ""
 echo "Step 8: Installing jones_sim..."
-cd /home/pjaganna/Software/jones_sim
+# Use the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 pip install -e .
 
 echo ""
