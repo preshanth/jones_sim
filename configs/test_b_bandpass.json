@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "description": "Test configuration for B (bandpass) calibration",
+    "version": "1.0",
+    "use_case": "Frequency-dependent gain recovery"
+  },
+  "jones_chain": {
+    "order": ["bandpass"],
+    "enabled_effects": ["bandpass"]
+  },
+  "effects": {
+    "bandpass": {
+      "type": "bandpass_amplitude_delay",
+      "per_antenna": true,
+      "per_polarization": true,
+      "frequency_dependent": true,
+      "reference_antenna": 0,
+      "ref_freq": 1.5e9,
+      "amplitude": {
+        "x_pol": {
+          "model": "trapezoidal",
+          "edge_fraction": 0.1,
+          "edge_rolloff": 0.8,
+          "passband_ripple_amplitude": 0.02
+        },
+        "y_pol": {
+          "model": "trapezoidal",
+          "edge_fraction": 0.1,
+          "edge_rolloff": 0.8,
+          "passband_ripple_amplitude": 0.02
+        }
+      },
+      "delay": {
+        "tau_x": {
+          "distribution": "uniform",
+          "min": -2e-9,
+          "max": 2e-9
+        },
+        "tau_y": {
+          "distribution": "uniform",
+          "min": -2e-9,
+          "max": 2e-9
+        }
+      }
+    }
+  },
+  "noise": {
+    "enabled": false,
+    "thermal_noise": {
+      "tsys_kelvin": 50.0,
+      "aperture_efficiency": 0.7,
+      "antenna_diameter_meters": 25.0
+    },
+    "random_seed": 44
+  },
+  "processing": {
+    "use_gpu": false,
+    "gpu_device": 0,
+    "chunk_size_rows": 100000,
+    "batch_gpu_size": 10000,
+    "random_seed": 44
+  },
+  "validation": {
+    "expected_amp_rms": 0.02,
+    "expected_phase_rms_deg": 2.0,
+    "casa_comparison_tolerance": 0.05,
+    "min_channels": 32
+  }
+}
