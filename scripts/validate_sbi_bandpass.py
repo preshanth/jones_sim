@@ -21,6 +21,7 @@ import os
 import sys
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -193,6 +194,100 @@ def test_sbi_training_minimal():
     logger.info("✓ Minimal inference test passed")
 
 
+def plot_bandpass_comparison(
+    frequencies: np.ndarray,
+    true_bandpass: np.ndarray,
+    sbi_bandpass: np.ndarray,
+    sbi_std: np.ndarray,
+    casa_bandpass: np.ndarray = None,
+    antennas_to_plot: list = [1, 10, 20],
+    output_path: str = "bandpass_comparison.png",
+):
+    """Plot bandpass comparison: Truth vs SBI (vs CASA if available).
+
+    Args:
+        frequencies: Frequency array in Hz
+        true_bandpass: Ground truth bandpass (n_antennas, n_channels, 2)
+        sbi_bandpass: SBI recovered bandpass (n_antennas, n_channels, 2)
+        sbi_std: SBI standard deviation in log-space (n_antennas, n_channels, 2)
+        casa_bandpass: CASA bandpass if available (n_antennas, n_channels, 2)
+        antennas_to_plot: List of antenna indices to plot
+        output_path: Where to save the figure
+    """
+    n_channels = len(frequencies)
+    freq_ghz = frequencies / 1e9
+
+    # Create figure with subplots for each antenna
+    n_ants = len(antennas_to_plot)
+    fig, axes = plt.subplots(n_ants, 4, figsize=(16, 4*n_ants))
+    if n_ants == 1:
+        axes = axes.reshape(1, -1)
+
+    for idx, ant in enumerate(antennas_to_plot):
+        for pol in [0, 1]:
+            pol_name = ["XX", "YY"][pol]
+
+            # Amplitude plot
+            ax_amp = axes[idx, pol*2]
+
+            # Truth
+            true_amp = np.abs(true_bandpass[ant, :, pol])
+            ax_amp.plot(freq_ghz, true_amp, 'k-', linewidth=2, label='Truth', alpha=0.7)
+
+            # SBI with uncertainty
+            sbi_amp = np.abs(sbi_bandpass[ant, :, pol])
+            # Convert log-space std to amplitude uncertainty
+            sbi_amp_err = sbi_amp * np.abs(sbi_std[ant, :, pol])
+            ax_amp.plot(freq_ghz, sbi_amp, 'b-', linewidth=2, label='SBI')
+            ax_amp.fill_between(
+                freq_ghz,
+                sbi_amp - sbi_amp_err,
+                sbi_amp + sbi_amp_err,
+                alpha=0.3,
+                color='blue',
+                label='SBI ±1σ'
+            )
+
+            # CASA if available
+            if casa_bandpass is not None:
+                casa_amp = np.abs(casa_bandpass[ant, :, pol])
+                ax_amp.plot(freq_ghz, casa_amp, 'r--', linewidth=1.5, label='CASA', alpha=0.7)
+
+            ax_amp.set_xlabel('Frequency (GHz)')
+            ax_amp.set_ylabel('Amplitude')
+            ax_amp.set_title(f'Ant {ant} {pol_name} - Amplitude')
+            ax_amp.legend(loc='best', fontsize=8)
+            ax_amp.grid(True, alpha=0.3)
+
+            # Phase plot
+            ax_phase = axes[idx, pol*2 + 1]
+
+            # Truth
+            true_phase = np.angle(true_bandpass[ant, :, pol])
+            ax_phase.plot(freq_ghz, true_phase, 'k-', linewidth=2, label='Truth', alpha=0.7)
+
+            # SBI
+            sbi_phase = np.angle(sbi_bandpass[ant, :, pol])
+            ax_phase.plot(freq_ghz, sbi_phase, 'b-', linewidth=2, label='SBI')
+
+            # CASA if available
+            if casa_bandpass is not None:
+                casa_phase = np.angle(casa_bandpass[ant, :, pol])
+                ax_phase.plot(freq_ghz, casa_phase, 'r--', linewidth=1.5, label='CASA', alpha=0.7)
+
+            ax_phase.set_xlabel('Frequency (GHz)')
+            ax_phase.set_ylabel('Phase (rad)')
+            ax_phase.set_title(f'Ant {ant} {pol_name} - Phase')
+            ax_phase.legend(loc='best', fontsize=8)
+            ax_phase.grid(True, alpha=0.3)
+            ax_phase.set_ylim(-np.pi, np.pi)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    logger.info(f"Saved bandpass comparison plot to {output_path}")
+    plt.close()
+
+
 def test_sbi_full_vla():
     """Full VLA-scale test (27 antennas, 64 channels)."""
     logger.info("\n" + "="*70)
@@ -286,6 +381,21 @@ def test_sbi_full_vla():
 
                 status = "✓" if (amp_error < 2*std_amp) else "✗"
                 logger.info(f"  Status: {status}")
+
+    # Generate comparison plots
+    logger.info("\n" + "="*70)
+    logger.info("GENERATING PLOTS")
+    logger.info("="*70)
+
+    plot_bandpass_comparison(
+        frequencies=sim.frequencies,
+        true_bandpass=true_bandpass,
+        sbi_bandpass=mean_bandpass,
+        sbi_std=std_bandpass_log,
+        casa_bandpass=None,  # TODO: Add CASA comparison
+        antennas_to_plot=test_ants,
+        output_path="sbi_bandpass_comparison.png",
+    )
 
     logger.info("\n✓ Full VLA-scale test completed")
 
