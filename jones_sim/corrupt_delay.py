@@ -19,7 +19,6 @@ def corrupt_ms_with_delays(
     delay_func: Optional[Callable] = None,
     random_seed: Optional[int] = None,
     use_gpu: bool = False,
-    gpu_device: int = 0,
     chunk_size: int = 100000,
     batch_gpu_size: int = 10000,
     add_noise: bool = False,
@@ -47,7 +46,6 @@ def corrupt_ms_with_delays(
         delay_func: Optional function(antenna_id) -> delay_in_seconds
         random_seed: Random seed for reproducibility
         use_gpu: If True, use GPU acceleration via CuPy
-        gpu_device: GPU device ID to use (default: 0)
         chunk_size: Rows to process per chunk (default: 100,000)
         batch_gpu_size: Visibilities per GPU batch (default: 10,000)
         add_noise: If True, add thermal noise based on radiometer equation
@@ -157,14 +155,12 @@ def corrupt_ms_with_delays(
         ref_freq=0.0,  # Use absolute frequency for delay solving
     )
 
-    jones_sim = JonesSimulator(gpu_device=gpu_device)
+    jones_sim = JonesSimulator()
     jones_sim.add_effect("delays", delay_effect)
     print("✓ BandpassDelay effect created")
 
     if use_gpu:
-        print(f"✓ GPU ACCELERATION ENABLED (device {gpu_device})")
-        n_gpus = JonesSimulator.get_available_gpus()
-        print(f"  Available GPUs: {n_gpus}")
+        print("✓ GPU ACCELERATION ENABLED")
 
     if add_noise:
         print("✓ THERMAL NOISE ENABLED")

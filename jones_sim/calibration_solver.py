@@ -13,6 +13,7 @@ import casatools
 import numpy as np
 
 from .casa_interface import MeasurementSetHandler
+from .jax_config import configure_jax
 
 logger = logging.getLogger(__name__)
 
@@ -34,16 +35,21 @@ except ImportError:
 class CalibrationSolver:
     """Unified calibration solver for K, G, B effects."""
 
-    def __init__(self, ms_path: str):
+    def __init__(self, ms_path: str, max_cpu_fraction: float = 0.5, gpu_device: int = 0):
         """Initialize solver.
 
         Args:
             ms_path: Path to measurement set
+            max_cpu_fraction: Max fraction of CPU cores if GPU unavailable (default: 0.5)
+            gpu_device: GPU device ID to use if available (default: 0)
         """
         if not JAX_AVAILABLE:
             raise ImportError(
                 "JAX and NumPyro required. Install with: pip install jax jaxlib numpyro"
             )
+
+        # Configure JAX for GPU or CPU
+        configure_jax(max_cpu_fraction=max_cpu_fraction, gpu_device=gpu_device)
 
         self.ms_path = ms_path
         self.ms_handler = MeasurementSetHandler(ms_path)

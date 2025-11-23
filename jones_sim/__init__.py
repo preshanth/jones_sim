@@ -6,6 +6,7 @@ __version__ = "0.1.0"
 # Calibration solver
 from .antsol import AntSolSolver, solve_gains_from_ms
 from .config import JonesConfig, load_config
+from .jax_config import configure_jax
 from .effects import (
     BandpassDelay,
     CrosshandPhase,
@@ -55,6 +56,7 @@ __all__ = [
     # Configuration
     "JonesConfig",
     "load_config",
+    "configure_jax",
     # Effects
     "ParallacticAngle",
     "ElectronicGains",
