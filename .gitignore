@@ -183,6 +183,9 @@ results/
 plots/
 figures/
 
+# SBI checkpoints
+sbi_checkpoints/
+
 # Profiling
 *.prof
 

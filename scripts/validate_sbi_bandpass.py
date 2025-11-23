@@ -288,11 +288,22 @@ def plot_bandpass_comparison(
     plt.close()
 
 
-def test_sbi_full_vla():
-    """Full VLA-scale test (27 antennas, 64 channels)."""
+def test_sbi_full_vla(resume: bool = False):
+    """Full VLA-scale test (27 antennas, 64 channels).
+
+    Args:
+        resume: If True, resume from checkpoint if available
+    """
     logger.info("\n" + "="*70)
     logger.info("FULL VLA-SCALE TEST")
     logger.info("="*70)
+
+    # Checkpoint paths
+    checkpoint_dir = "sbi_checkpoints"
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    solver_path = os.path.join(checkpoint_dir, "sbi_solver_full.pkl")
+    data_path = os.path.join(checkpoint_dir, "sbi_data_full.npz")
 
     # VLA D-config scale
     n_antennas = 27
@@ -308,34 +319,81 @@ def test_sbi_full_vla():
     logger.info(f"  Parameter dim: {sim.get_param_dim():,}")
     logger.info(f"  Observation dim: {sim.get_obs_dim():,}")
 
-    # Generate ground truth
-    true_bandpass = generate_ground_truth_bandpass(
-        n_antennas=n_antennas,
-        n_channels=n_channels,
-        amp_std=0.2,
-        phase_std=0.3,
-    )
+    # Check if we can resume
+    can_resume = resume and os.path.exists(solver_path) and os.path.exists(data_path)
 
-    # Flatten to SBI format
-    true_params = sim.flatten_bandpass(true_bandpass)
+    if can_resume:
+        logger.info("\n" + "="*70)
+        logger.info("RESUMING FROM CHECKPOINT")
+        logger.info("="*70)
 
-    # Simulate observations
-    logger.info("Simulating observations...")
-    obs = sim.simulate(true_params)
+        # Load saved data
+        logger.info(f"Loading data from {data_path}...")
+        data = np.load(data_path)
+        true_bandpass = data['true_bandpass']
+        obs = data['obs']
 
-    logger.info(f"Observation shape: {obs.shape}")
-    logger.info(f"Observation range: {np.min(obs):.3f} - {np.max(obs):.3f}")
+        logger.info(f"Loading trained solver from {solver_path}...")
+        solver = SBIBandpassSolver(
+            simulator=sim,
+            n_rounds=2,
+            density_estimator="maf",
+        )
+        solver.load(solver_path)
 
-    # Train SBI (with moderate number of simulations)
-    solver = SBIBandpassSolver(
-        simulator=sim,
-        n_rounds=2,
-        density_estimator="maf",
-    )
+        logger.info("✓ Resumed from checkpoint successfully")
 
-    logger.info("\nTraining SBI (this will take a few minutes)...")
-    logger.info("  Using 5000 simulations for speed (use 10k+ for production)")
-    solver.train(n_simulations=5000, show_progress_bars=True)
+    else:
+        if resume:
+            logger.info("\n⚠ Checkpoint not found, training from scratch")
+
+        logger.info("\n" + "="*70)
+        logger.info("TRAINING FROM SCRATCH")
+        logger.info("="*70)
+
+        # Generate ground truth
+        true_bandpass = generate_ground_truth_bandpass(
+            n_antennas=n_antennas,
+            n_channels=n_channels,
+            amp_std=0.2,
+            phase_std=0.3,
+        )
+
+        # Flatten to SBI format
+        true_params = sim.flatten_bandpass(true_bandpass)
+
+        # Simulate observations
+        logger.info("Simulating observations...")
+        obs = sim.simulate(true_params)
+
+        logger.info(f"Observation shape: {obs.shape}")
+        logger.info(f"Observation range: {np.min(obs):.3f} - {np.max(obs):.3f}")
+
+        # Train SBI (with moderate number of simulations)
+        solver = SBIBandpassSolver(
+            simulator=sim,
+            n_rounds=2,
+            density_estimator="maf",
+        )
+
+        logger.info("\nTraining SBI (this will take a few minutes)...")
+        logger.info("  Using 5000 simulations for speed (use 10k+ for production)")
+        solver.train(n_simulations=5000, show_progress_bars=True)
+
+        # Save checkpoint
+        logger.info("\n" + "="*70)
+        logger.info("SAVING CHECKPOINT")
+        logger.info("="*70)
+
+        solver.save(solver_path)
+        np.savez(
+            data_path,
+            true_bandpass=true_bandpass,
+            obs=obs,
+        )
+
+        logger.info(f"✓ Saved solver to {solver_path}")
+        logger.info(f"✓ Saved data to {data_path}")
 
     # Infer
     logger.info("\nPerforming inference...")
@@ -408,6 +466,11 @@ def main():
         default="basic",
         help="Which test to run"
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from checkpoint if available (for 'full' test)"
+    )
 
     args = parser.parse_args()
 
@@ -418,7 +481,7 @@ def main():
         test_sbi_training_minimal()
 
     if args.test in ["full", "all"]:
-        test_sbi_full_vla()
+        test_sbi_full_vla(resume=args.resume)
 
     logger.info("\n" + "="*70)
     logger.info("ALL TESTS COMPLETED")
