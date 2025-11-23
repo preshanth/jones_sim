@@ -14,12 +14,14 @@ except ImportError:
     cp = None
 
 try:
+    import jax
     import jax.numpy as jnp
 
     JAX_AVAILABLE = True
 except ImportError:
     JAX_AVAILABLE = False
     jnp = None
+    jax = None
 
 
 class JonesSimulator:
