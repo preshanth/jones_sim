@@ -5,9 +5,11 @@ Separate from solver to allow quick plot iteration without re-running inference.
 """
 
 import os
+from typing import Optional
 
 import numpy as np
-from bokeh.layouts import gridplot
+from bokeh.layouts import column, gridplot, row
+from bokeh.models import HoverTool
 from bokeh.plotting import figure, output_file, save
 
 
