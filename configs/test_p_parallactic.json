@@ -1,0 +1,38 @@
+{
+  "jones_chain": {
+    "enabled_effects": ["parallactic_angle"],
+    "effect_order": ["parallactic_angle"]
+  },
+  "effects": {
+    "parallactic_angle": {
+      "type": "parallactic_angle",
+      "telescope_latitude_deg": -30.72,
+      "source_declination_deg": -45.0,
+      "observation_hours": 4.0,
+      "description": "Parallactic angle rotation - geometric polarization effect"
+    }
+  },
+  "noise": {
+    "add_thermal_noise": false,
+    "sefd": 420.0,
+    "channel_width_hz": 1000000.0,
+    "integration_time_s": 10.0
+  },
+  "validation": {
+    "recovery_threshold_percent": 1.0,
+    "description": "Parallactic angle should be perfectly recovered (computed from geometry)"
+  },
+  "metadata": {
+    "description": "Test configuration for parallactic angle (P) effect validation",
+    "effect_type": "P - Parallactic Angle",
+    "polarization_required": true,
+    "n_correlations": 4,
+    "notes": [
+      "Parallactic angle is a geometric effect, not calibrated like other effects",
+      "It's computed from source position and telescope location",
+      "Time-dependent: varies as source moves across sky",
+      "Essential for polarization calibration",
+      "CASA applies this with parang=True in imaging"
+    ]
+  }
+}

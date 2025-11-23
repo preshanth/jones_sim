@@ -6,14 +6,19 @@ This script validates the full calibration pipeline with all effects:
 - G (Time-varying gains)
 - B (Bandpass)
 - D (Polarization leakage)
+- P (Parallactic angle - geometric)
+- F (Faraday rotation - ionospheric RM)
 
 Tests sequential calibration:
 1. Create simulated MS with all effects combined
-2. Run sequential CASA calibration (K → G → B → D)
+2. Run sequential CASA calibration (K → G → B → D → P → F)
 3. Run our sequential CalibrationSolver
 4. Compare: truth vs CASA vs ours for each effect
 5. Validate error propagation through calibration stages
 6. Returns exit code 0 if all stages pass
+
+Standard calibration order: P → D → G → B → K → F
+(P is geometric, applied first; F is ionospheric, often last)
 
 Usage:
     python validate_full_chain.py [options]
@@ -24,7 +29,7 @@ Options:
     --seed N            Random seed (default: 100)
     --no_noise          Skip thermal noise (for exact recovery test)
     --map               Use MAP instead of MCMC
-    --effects EFFECTS   Effects to include (default: K,G,B,D)
+    --effects EFFECTS   Effects to include (default: K,G,B,D,P,F)
 """
 
 import argparse
@@ -310,7 +315,7 @@ def main():
     parser.add_argument("--seed", type=int, default=100, help="Random seed")
     parser.add_argument("--no_noise", action="store_true", help="Skip thermal noise")
     parser.add_argument("--map", action="store_true", help="Use MAP instead of MCMC")
-    parser.add_argument("--effects", default="K,G,B,D", help="Effects to test (comma-separated)")
+    parser.add_argument("--effects", default="K,G,B,D,P,F", help="Effects to test (comma-separated)")
     args = parser.parse_args()
 
     effects = args.effects.split(",")
