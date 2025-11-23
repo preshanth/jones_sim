@@ -372,6 +372,7 @@ class SBIBandpassSolver:
         training_batch_size: int = 50,
         learning_rate: float = 5e-4,
         show_progress_bars: bool = True,
+        pilot_observation: Optional[np.ndarray] = None,
     ) -> None:
         """Train the neural density estimator.
 
@@ -380,7 +381,16 @@ class SBIBandpassSolver:
             training_batch_size: Batch size for neural network training
             learning_rate: Learning rate for optimizer
             show_progress_bars: Show progress during training/simulation
+            pilot_observation: Optional observation to focus sequential rounds on.
+                If None and n_rounds > 1, will generate a pilot observation from prior.
         """
+        # Generate pilot observation if needed for sequential training
+        if self.n_rounds > 1 and pilot_observation is None:
+            logger.info("Generating pilot observation for sequential training...")
+            pilot_params = self.prior.sample((1,)).numpy()[0]
+            pilot_observation = self.simulator.simulate(pilot_params)
+            logger.info(f"Pilot observation generated (shape: {pilot_observation.shape})")
+
         for round_idx in range(self.n_rounds):
             logger.info(f"\n=== Training Round {round_idx + 1}/{self.n_rounds} ===")
 
@@ -388,7 +398,9 @@ class SBIBandpassSolver:
             if round_idx == 0:
                 theta = self.prior.sample((n_simulations,))
             else:
-                theta = self.posterior.sample((n_simulations,))
+                # For round 2+, sample from posterior conditioned on pilot observation
+                pilot_obs_tensor = torch.tensor(pilot_observation, dtype=torch.float32)
+                theta = self.posterior.sample((n_simulations,), x=pilot_obs_tensor)
 
             # Run simulations
             logger.info(f"Running {n_simulations} simulations...")
