@@ -122,14 +122,16 @@ def test_simulator_basic():
     params2_amp = params2[:2*n_params_per_pol]
     params2_phase = params2[2*n_params_per_pol:]
 
-    # Check amplitudes (should be exact)
-    amp_match = np.allclose(params_amp, params2_amp, rtol=1e-10, atol=1e-12)
+    # Check amplitudes (float32 precision from PyTorch prior)
+    # For float32: machine epsilon ~1.2e-7, use 1e-6 for exp/log round-trip
+    amp_match = np.allclose(params_amp, params2_amp, rtol=1e-6, atol=1e-7)
 
     # Check phases (account for 2π wrapping)
     # Two phases are equivalent if diff ≈ 0 or diff ≈ ±2π
     phase_diff = np.abs(params_phase - params2_phase)
     phase_diff_wrapped = np.minimum(phase_diff, 2*np.pi - phase_diff)
-    phase_match = np.allclose(phase_diff_wrapped, 0, rtol=1e-10, atol=1e-12)
+    # Use float32-appropriate tolerance
+    phase_match = np.allclose(phase_diff_wrapped, 0, rtol=1e-6, atol=1e-7)
 
     if not (amp_match and phase_match):
         logger.error("Round-trip failed!")
