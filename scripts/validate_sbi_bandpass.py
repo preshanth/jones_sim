@@ -107,7 +107,50 @@ def test_simulator_basic():
     logger.info(f"Ref ant bandpass: {bp[0, 0, :]}")
 
     params2 = sim.flatten_bandpass(bp)
-    assert np.allclose(params, params2), "Round-trip failed!"
+
+    # Test round-trip with phase wrapping awareness
+    # The parameter vector is: [log_amp_xx, log_amp_yy, phase_xx, phase_yy]
+    # For amplitudes, direct comparison is fine
+    # For phases, need to account for ±π equivalence
+    n_free = sim.n_antennas - 1
+    n_params_per_pol = n_free * sim.n_channels
+
+    # Split params into amplitude and phase sections
+    params_amp = params[:2*n_params_per_pol]  # log_amp_xx and log_amp_yy
+    params_phase = params[2*n_params_per_pol:]  # phase_xx and phase_yy
+
+    params2_amp = params2[:2*n_params_per_pol]
+    params2_phase = params2[2*n_params_per_pol:]
+
+    # Check amplitudes (should be exact)
+    amp_match = np.allclose(params_amp, params2_amp, rtol=1e-10, atol=1e-12)
+
+    # Check phases (account for 2π wrapping)
+    # Two phases are equivalent if diff ≈ 0 or diff ≈ ±2π
+    phase_diff = np.abs(params_phase - params2_phase)
+    phase_diff_wrapped = np.minimum(phase_diff, 2*np.pi - phase_diff)
+    phase_match = np.allclose(phase_diff_wrapped, 0, rtol=1e-10, atol=1e-12)
+
+    if not (amp_match and phase_match):
+        logger.error("Round-trip failed!")
+
+        if not amp_match:
+            amp_diff = np.abs(params_amp - params2_amp)
+            max_amp_idx = np.argmax(amp_diff)
+            logger.error(f"\n  Amplitude mismatch:")
+            logger.error(f"    Max diff: {amp_diff[max_amp_idx]:.15e} at index {max_amp_idx}")
+            logger.error(f"    params_amp[{max_amp_idx}] = {params_amp[max_amp_idx]:.15e}")
+            logger.error(f"    params2_amp[{max_amp_idx}] = {params2_amp[max_amp_idx]:.15e}")
+
+        if not phase_match:
+            max_phase_idx = np.argmax(phase_diff_wrapped)
+            logger.error(f"\n  Phase mismatch:")
+            logger.error(f"    Max diff (wrapped): {phase_diff_wrapped[max_phase_idx]:.15e} at index {max_phase_idx}")
+            logger.error(f"    params_phase[{max_phase_idx}] = {params_phase[max_phase_idx]:.15e}")
+            logger.error(f"    params2_phase[{max_phase_idx}] = {params2_phase[max_phase_idx]:.15e}")
+            logger.error(f"    Raw diff: {phase_diff[max_phase_idx]:.15e}")
+
+        raise AssertionError("Round-trip failed!")
 
     logger.info("✓ Basic simulator test passed")
 
