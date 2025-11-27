@@ -40,9 +40,11 @@ import numpy as np
 from casatools import table
 
 from jones_sim import JonesSimulator, JonesConfig
+from jones_sim.effects import RotationMeasure
 from jones_sim.calibration_solver import CalibrationSolver
 from jones_sim.casa_interface import MeasurementSetHandler
 from jones_sim.plotting_enhanced import plot_three_way_comparison
+from scripts.simulate_3c286 import simulate_3c286
 
 
 def generate_ground_truth_rm(
@@ -81,12 +83,7 @@ def generate_ground_truth_rm(
 
 
 def corrupt_ms_with_faraday(ms_path, rm_values, add_noise=True, sefd=420.0):
-    """Corrupt MS DATA with Faraday rotation.
-
-    Faraday rotation angle: χ(ν) = RM × λ² = RM × (c/ν)²
-
-    Rotation matrix in Stokes space gets complex in correlation space.
-    For linear feeds (XX, XY, YX, YY), Faraday rotation mixes polarizations.
+    """Corrupt MS DATA with Faraday rotation using JonesSimulator.
 
     Args:
         ms_path: Path to MS
@@ -97,65 +94,73 @@ def corrupt_ms_with_faraday(ms_path, rm_values, add_noise=True, sefd=420.0):
     ms_handler = MeasurementSetHandler(ms_path)
 
     # Read data
-    data_dict = ms_handler.read_data()
-    vis = data_dict["data"]
-    ant1 = data_dict["antenna1"]
-    ant2 = data_dict["antenna2"]
-    freqs = data_dict["frequencies"]
+    tb = table()
+    tb.open(ms_path, nomodify=False)
+
+    model_data = tb.getcol("MODEL_DATA")  # Clean data
+    antenna1 = tb.getcol("ANTENNA1")
+    antenna2 = tb.getcol("ANTENNA2")
+
+    n_corr, n_chan, n_row = model_data.shape
 
     # Check full polarization
-    if vis.shape[2] != 4:
+    if n_corr != 4:
         raise ValueError(
-            f"MS must have 4 polarizations for Faraday rotation, got {vis.shape[2]}"
+            f"MS must have 4 polarizations for Faraday rotation, got {n_corr}"
         )
 
-    # Speed of light
-    c = 299792458.0  # m/s
+    # Get frequency info
+    summary = ms_handler.get_observation_summary()
+    spw_info = summary["frequency_info"][0]
+    freqs = spw_info["chan_freqs"]
+    chan_width = spw_info.get("chan_width", freqs[1] - freqs[0] if len(freqs) > 1 else 1e6)
 
-    # Apply Faraday rotation
-    n_vis = len(vis)
-    n_chan = len(freqs)
+    # Create simulator with Faraday rotation
+    sim = JonesSimulator()
+    faraday_effect = RotationMeasure(rotation_measure=rm_values)
+    sim.add_effect("faraday", faraday_effect)
 
-    for i in range(n_vis):
-        a1 = ant1[i]
-        a2 = ant2[i]
+    # Reshape for simulator: (n_vis, 4)
+    ideal_vis = model_data.transpose(2, 1, 0).reshape(-1, n_corr)  # (n_row*n_chan, 4)
+    frequencies = np.tile(freqs, n_row)
+    times = np.zeros(n_row * n_chan)
+    ant1_arr = np.repeat(antenna1, n_chan)
+    ant2_arr = np.repeat(antenna2, n_chan)
 
-        # RM difference (differential rotation)
-        rm_diff = rm_values[a1] - rm_values[a2]
+    # Corrupt using simulator
+    print("Corrupting visibilities with Faraday rotation...", end=" ", flush=True)
+    corrupted_vis = sim.corrupt_visibilities(
+        ideal_vis, frequencies, times, ant1_arr, ant2_arr, use_gpu=False
+    )
+    print("Done")
 
-        for ch in range(n_chan):
-            # Wavelength squared
-            wavelength_sq = (c / freqs[ch]) ** 2  # m²
+    # Reshape back to (n_corr, n_chan, n_row)
+    corrupted_data = corrupted_vis.reshape(n_row, n_chan, n_corr).transpose(2, 1, 0)
 
-            # Rotation angle
-            chi = rm_diff * wavelength_sq  # radians
-
-            cos_chi = np.cos(chi)
-            sin_chi = np.sin(chi)
-
-            # Faraday rotation matrix applied to correlations
-            # Simplified form - full treatment requires Mueller matrices
-            # This approximation works for small rotations
-            f_matrix = np.array([
-                cos_chi**2,         # XX
-                cos_chi * sin_chi,  # XY
-                -cos_chi * sin_chi, # YX
-                sin_chi**2,         # YY
-            ])
-
-            vis[i, ch, :] *= f_matrix
-
-    # Add thermal noise
+    # Add thermal noise if requested
     if add_noise:
-        t_int = 10.0
-        bw = 1e6
-        sigma = sefd / np.sqrt(2 * t_int * bw)
-        noise_real = np.random.normal(0, sigma, vis.shape)
-        noise_imag = np.random.normal(0, sigma, vis.shape)
-        vis += noise_real + 1j * noise_imag
+        # Get integration time
+        times_col = tb.getcol("TIME")
+        unique_times = np.unique(times_col)
+        if len(unique_times) > 1:
+            int_time = np.median(np.diff(unique_times))
+        else:
+            int_time = 2.0
 
-    # Write back
-    ms_handler.write_data(vis)
+        # Radiometer equation
+        sigma = sefd / np.sqrt(2 * chan_width * int_time)
+
+        # Add complex Gaussian noise
+        sigma_complex = sigma / np.sqrt(2)
+        noise = np.random.normal(0, sigma_complex, corrupted_data.shape) + \
+                1j * np.random.normal(0, sigma_complex, corrupted_data.shape)
+        corrupted_data = corrupted_data + noise
+        print(f"  Added thermal noise (sigma={sigma:.4f} Jy)")
+
+    # Write back to MS
+    tb.putcol("DATA", corrupted_data)
+    tb.close()
+
     print(f"✓ Applied Faraday rotation (noise={add_noise})")
 
 
@@ -280,13 +285,17 @@ def main():
     parser.add_argument("--map", action="store_true", help="Use MAP instead of MCMC")
     args = parser.parse_args()
 
-    # Check MS exists
-    if not os.path.exists(args.msname):
-        print(f"✗ MS not found: {args.msname}")
-        print("  MS must have 4 polarizations (XX, XY, YX, YY)")
-        print(f"  MS should have >= 32 channels for RM sensitivity (requested: {args.n_channels})")
-        print("  Create MS first or implement simulation in this script")
-        return 1
+    # Create simulated MS if needed (full polarization, many channels for RM)
+    if not args.skip_sim or not os.path.exists(args.msname):
+        print(f"Creating simulated 3C286 MS with full polarization ({args.n_channels} channels for RM)...")
+        simulate_3c286(
+            msname=args.msname,
+            n_channels=args.n_channels,
+            obs_time_min=5.0,
+            int_time_sec=2.0,
+        )
+    else:
+        print(f"Using existing MS: {args.msname}")
 
     # Load MS
     ms_handler = MeasurementSetHandler(args.msname)

@@ -33,9 +33,11 @@ from casatasks import gaincal
 from casatools import table
 
 from jones_sim import JonesSimulator, JonesConfig
+from jones_sim.effects import ElectronicGains
 from jones_sim.calibration_solver import CalibrationSolver
 from jones_sim.casa_interface import MeasurementSetHandler
 from jones_sim.plotting_enhanced import plot_three_way_comparison
+from scripts.simulate_3c286 import simulate_3c286
 
 
 def generate_ground_truth_gains(
@@ -109,7 +111,7 @@ def generate_ground_truth_gains(
 
 
 def corrupt_ms_with_gains(ms_path, gains, add_noise=True, sefd=420.0):
-    """Corrupt MS DATA column with time-varying gain effects.
+    """Corrupt MS DATA column with time-varying gain effects using JonesSimulator.
 
     Args:
         ms_path: Path to MS
@@ -120,53 +122,80 @@ def corrupt_ms_with_gains(ms_path, gains, add_noise=True, sefd=420.0):
     ms_handler = MeasurementSetHandler(ms_path)
 
     # Read data
-    data_dict = ms_handler.read_data()
-    vis = data_dict["data"]
-    ant1 = data_dict["antenna1"]
-    ant2 = data_dict["antenna2"]
-    times = data_dict["times"]
+    tb = table()
+    tb.open(ms_path, nomodify=False)
+
+    model_data = tb.getcol("MODEL_DATA")  # Clean data
+    antenna1 = tb.getcol("ANTENNA1")
+    antenna2 = tb.getcol("ANTENNA2")
+    times_col = tb.getcol("TIME")
+
+    n_corr, n_chan, n_row = model_data.shape
+
+    # Get frequency info
+    summary = ms_handler.get_observation_summary()
+    spw_info = summary["frequency_info"][0]
+    freqs = spw_info["chan_freqs"]
+    chan_width = spw_info.get("chan_width", freqs[1] - freqs[0] if len(freqs) > 1 else 1e6)
 
     # Map times to indices
-    unique_times = np.unique(times)
+    unique_times = np.unique(times_col)
     time_to_idx = {t: i for i, t in enumerate(unique_times)}
 
-    # Apply gains: V_corrupted = G1 * V_true * G2^H
-    n_vis = len(vis)
-    for i in range(n_vis):
-        a1 = ant1[i]
-        a2 = ant2[i]
-        t_idx = time_to_idx[times[i]]
+    # Create time-varying gain callables
+    def g_xx_func(freq, time, antenna_id):
+        t_idx = min(time_to_idx.get(time, 0), gains.shape[1] - 1)
+        return gains[antenna_id, t_idx, 0]
 
-        # Get gains for this baseline and time
-        g1 = gains[a1, t_idx, :]  # [2]
-        g2 = gains[a2, t_idx, :]  # [2]
+    def g_yy_func(freq, time, antenna_id):
+        t_idx = min(time_to_idx.get(time, 0), gains.shape[1] - 1)
+        return gains[antenna_id, t_idx, 1]
 
-        # Apply to each channel
-        for ch in range(vis.shape[1]):
-            # Diagonal Jones matrices (scalar gains per polarization)
-            J1 = np.diag(g1)
-            J2 = np.diag(g2)
+    # Create simulator with time-varying gains
+    sim = JonesSimulator()
+    gain_effect = ElectronicGains(g_xx=g_xx_func, g_yy=g_yy_func)
+    sim.add_effect("gains", gain_effect)
 
-            # V_corrupted = J1 * V * J2^H
-            vis_matrix = vis[i, ch, :].reshape(2, 2)
-            vis[i, ch, :] = (J1 @ vis_matrix @ J2.conj().T).ravel()
+    # Reshape for simulator: (n_vis, 4)
+    ideal_vis = model_data.transpose(2, 1, 0).reshape(-1, n_corr)  # (n_row*n_chan, 4)
+    frequencies = np.tile(freqs, n_row)
+    times = np.repeat(times_col, n_chan)
+    ant1_arr = np.repeat(antenna1, n_chan)
+    ant2_arr = np.repeat(antenna2, n_chan)
+
+    # Corrupt using simulator
+    print("Corrupting visibilities with time-varying gains...", end=" ", flush=True)
+    corrupted_vis = sim.corrupt_visibilities(
+        ideal_vis, frequencies, times, ant1_arr, ant2_arr, use_gpu=False
+    )
+    print("Done")
+
+    # Reshape back to (n_corr, n_chan, n_row)
+    corrupted_data = corrupted_vis.reshape(n_row, n_chan, n_corr).transpose(2, 1, 0)
 
     # Add thermal noise if requested
     if add_noise:
-        # Estimate noise sigma from SEFD and integration time
-        # Assume 10s integration, 1 MHz channels
-        t_int = 10.0  # seconds
-        bw = 1e6  # Hz
-        sigma = sefd / np.sqrt(2 * t_int * bw)
+        # Calculate integration time
+        if len(unique_times) > 1:
+            int_time = np.median(np.diff(unique_times))
+        else:
+            int_time = 2.0
 
-        # Add Gaussian noise (real and imag)
-        noise_real = np.random.normal(0, sigma, vis.shape)
-        noise_imag = np.random.normal(0, sigma, vis.shape)
-        vis += noise_real + 1j * noise_imag
+        # Radiometer equation
+        sigma = sefd / np.sqrt(2 * chan_width * int_time)
 
-    # Write back to MS
-    ms_handler.write_data(vis)
-    print(f"✓ Corrupted MS with gain effects (noise={add_noise})")
+        # Add complex Gaussian noise
+        sigma_complex = sigma / np.sqrt(2)
+        noise = np.random.normal(0, sigma_complex, corrupted_data.shape) + \
+                1j * np.random.normal(0, sigma_complex, corrupted_data.shape)
+        corrupted_data = corrupted_data + noise
+        print(f"  Added thermal noise (sigma={sigma:.4f} Jy)")
+
+    # Write corrupted data
+    tb.putcol("DATA", corrupted_data)
+    tb.close()
+
+    print(f"✓ Corrupted MS with time-varying gain effects (noise={add_noise})")
 
 
 def run_casa_gaincal(ms_path, gtable, refant="0", solint="int"):
@@ -373,18 +402,25 @@ def main():
     parser.add_argument("--msname", default="sim_gain_test.ms", help="MS name")
     parser.add_argument("--skip_sim", action="store_true", help="Skip simulation if MS exists")
     parser.add_argument("--n_times", type=int, default=60, help="Number of time samples")
+    parser.add_argument("--n_channels", type=int, default=64, help="Number of channels")
     parser.add_argument("--seed", type=int, default=43, help="Random seed")
     parser.add_argument("--no_noise", action="store_true", help="Skip thermal noise")
     parser.add_argument("--map", action="store_true", help="Use MAP instead of MCMC")
     args = parser.parse_args()
 
-    # TODO: Create simulated MS (similar to bandpass validation)
-    # For now, assume MS exists
-
-    if not os.path.exists(args.msname):
-        print(f"✗ MS not found: {args.msname}")
-        print("  Create MS first or implement simulation in this script")
-        return 1
+    # Create simulated MS if needed
+    if not args.skip_sim or not os.path.exists(args.msname):
+        print("Creating simulated 3C286 MS...")
+        # Calculate obs time from n_times and 2s integration
+        obs_time_min = (args.n_times * 2.0) / 60.0
+        simulate_3c286(
+            msname=args.msname,
+            n_channels=args.n_channels,
+            obs_time_min=obs_time_min,
+            int_time_sec=2.0,
+        )
+    else:
+        print(f"Using existing MS: {args.msname}")
 
     # Load MS to get metadata
     ms_handler = MeasurementSetHandler(args.msname)
