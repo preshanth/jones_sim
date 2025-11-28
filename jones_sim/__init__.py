@@ -6,7 +6,6 @@ __version__ = "0.1.0"
 # Calibration solver
 from .antsol import AntSolSolver, solve_gains_from_ms
 from .config import JonesConfig, load_config
-from .jax_config import configure_jax
 from .effects import (
     BandpassDelay,
     CrosshandPhase,
@@ -16,6 +15,7 @@ from .effects import (
     RLDelayDifference,
     RotationMeasure,
 )
+from .jax_config import configure_jax
 from .simulator import JonesSimulator
 from .source_models import (
     SourceModel,

@@ -1,0 +1,53 @@
+{
+  "metadata": {
+    "description": "Test configuration for K (delay) calibration only",
+    "version": "1.0",
+    "use_case": "Delay recovery validation"
+  },
+  "jones_chain": {
+    "order": ["bandpass"],
+    "enabled_effects": ["bandpass"]
+  },
+  "effects": {
+    "bandpass": {
+      "type": "bandpass_amplitude_delay",
+      "per_antenna": true,
+      "per_polarization": false,
+      "frequency_dependent": true,
+      "reference_antenna": 0,
+      "ref_freq": 0.0,
+      "delay": {
+        "tau_x": {
+          "distribution": "uniform",
+          "min": -10e-9,
+          "max": 10e-9
+        },
+        "tau_y": {
+          "distribution": "uniform",
+          "min": -10e-9,
+          "max": 10e-9
+        }
+      }
+    }
+  },
+  "noise": {
+    "enabled": false,
+    "thermal_noise": {
+      "tsys_kelvin": 50.0,
+      "aperture_efficiency": 0.7,
+      "antenna_diameter_meters": 25.0
+    },
+    "random_seed": 42
+  },
+  "processing": {
+    "use_gpu": false,
+    "gpu_device": 0,
+    "chunk_size_rows": 100000,
+    "batch_gpu_size": 10000,
+    "random_seed": 42
+  },
+  "validation": {
+    "expected_rms_ns": 0.01,
+    "casa_comparison_tolerance": 0.1
+  }
+}

@@ -70,7 +70,7 @@ class BayesianDelayPlotter:
         obs_amp = np.sqrt(self.observed_vis_real**2 + self.observed_vis_imag**2)
         obs_phase = np.arctan2(self.observed_vis_imag, self.observed_vis_real)
 
-        model_amp = np.sqrt(self.model_vis_real**2 + self.model_vis_imag**2)
+        # model_amp = np.sqrt(self.model_vis_real**2 + self.model_vis_imag**2)
         model_phase = np.arctan2(self.model_vis_imag, self.model_vis_real)
 
         # Phase residuals
@@ -197,7 +197,7 @@ class BayesianDelayPlotter:
         print(f"{'=' * 70}")
 
         # Trace plots for all free delays
-        fig = az.plot_trace(
+        az.plot_trace(
             self.trace,
             var_names=["delays_free"],
             compact=True,
@@ -270,7 +270,7 @@ class BayesianDelayPlotter:
         print(f"{'=' * 70}")
 
         try:
-            fig = az.plot_autocorr(
+            az.plot_autocorr(
                 self.trace,
                 var_names=["delays_free"],
                 max_lag=100,
@@ -290,7 +290,7 @@ class BayesianDelayPlotter:
         print("PLOTTING RANK PLOTS")
         print(f"{'=' * 70}")
 
-        fig = az.plot_rank(
+        az.plot_rank(
             self.trace,
             var_names=["delays_free"],
             backend_kwargs={"figsize": (14, 2 * (self.n_antennas - 1))},
@@ -307,7 +307,7 @@ class BayesianDelayPlotter:
         print("PLOTTING FOREST PLOT")
         print(f"{'=' * 70}")
 
-        fig = az.plot_forest(
+        az.plot_forest(
             self.trace,
             var_names=["delays_free"],
             combined=True,

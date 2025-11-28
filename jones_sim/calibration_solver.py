@@ -35,7 +35,9 @@ except ImportError:
 class CalibrationSolver:
     """Unified calibration solver for K, G, B effects."""
 
-    def __init__(self, ms_path: str, max_cpu_fraction: float = 0.5, gpu_device: int = 0):
+    def __init__(
+        self, ms_path: str, max_cpu_fraction: float = 0.5, gpu_device: int = 0
+    ):
         """Initialize solver.
 
         Args:
@@ -337,22 +339,29 @@ class CalibrationSolver:
         """Add effect to solve.
 
         Args:
-            name: Effect name ('K', 'G', or 'B')
+            name: Effect name ('K', 'G', 'B', 'D', etc.)
             solint: Solution interval ('inf', 'int', or time like '30s')
             calmode: Calibration mode ('p', 'a', 'ap')
             **prior_config: Effect-specific prior parameters
                 K: prior_bound_ns (default 1.0)
                 G: prior_std (default 0.1)
                 B: prior_std (default 0.05)
+                D: prior_std (default 0.01)
         """
-        if name not in ["K", "G", "B"]:
-            raise ValueError(f"Unknown effect: {name}. Must be K, G, or B")
+        # Check if effect exists in registry
+        from jones_sim.solvable_effects import EFFECT_REGISTRY
+
+        if name not in EFFECT_REGISTRY:
+            raise ValueError(
+                f"Unknown effect: {name}. Available: {list(EFFECT_REGISTRY.keys())}"
+            )
 
         # Default prior configs
         defaults = {
             "K": {"prior_bound_ns": 1.0},
             "G": {"prior_std": 0.1},
             "B": {"prior_std": 0.05},
+            "D": {"prior_std": 0.01},
         }
 
         config = defaults.get(name, {})
@@ -451,6 +460,28 @@ class CalibrationSolver:
                     self.effects["B"]["casa_values"] = bandpass
 
                 logger.info(f"{effect_name} solutions loaded")
+
+            elif effect_name == "D":
+                # D-term table: CPARAM (complex leakage)
+                cparam = tb.getcol("CPARAM")
+                antennas = tb.getcol("ANTENNA1")
+                flags = tb.getcol("FLAG")
+
+                # Shape: (n_pol, n_chan, n_rows) where n_pol=2 (Dx, Dy)
+                n_pol, n_chan, n_rows = cparam.shape
+
+                # Extract D-terms per antenna
+                d_terms = np.zeros((self.n_antennas, 2), dtype=complex)
+                for row in range(n_rows):
+                    ant = antennas[row]
+                    for pol in range(min(n_pol, 2)):
+                        if not flags[pol, 0, row]:
+                            d_terms[ant, pol] = cparam[pol, 0, row]
+
+                self.effects["D"]["casa_values"] = d_terms
+                logger.info(
+                    f"D-terms loaded: mean amplitude={np.mean(np.abs(d_terms)):.4f}"
+                )
 
             tb.close()
 

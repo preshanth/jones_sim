@@ -1,0 +1,54 @@
+{
+  "metadata": {
+    "description": "Test configuration for D (leakage) calibration",
+    "version": "1.0",
+    "use_case": "Polarization leakage recovery",
+    "requires": "Full Stokes MS (4 correlations)"
+  },
+  "jones_chain": {
+    "order": ["leakage"],
+    "enabled_effects": ["leakage"]
+  },
+  "effects": {
+    "leakage": {
+      "type": "feed_leakage",
+      "per_antenna": true,
+      "d_xy": {
+        "distribution": "complex_gaussian",
+        "mean_real": 0.05,
+        "mean_imag": 0.05,
+        "std_real": 0.01,
+        "std_imag": 0.01
+      },
+      "d_yx": {
+        "distribution": "complex_gaussian",
+        "mean_real": 0.05,
+        "mean_imag": 0.05,
+        "std_real": 0.01,
+        "std_imag": 0.01
+      },
+      "theta": 0.0
+    }
+  },
+  "noise": {
+    "enabled": false,
+    "thermal_noise": {
+      "tsys_kelvin": 50.0,
+      "aperture_efficiency": 0.7,
+      "antenna_diameter_meters": 25.0
+    },
+    "random_seed": 45
+  },
+  "processing": {
+    "use_gpu": false,
+    "gpu_device": 0,
+    "chunk_size_rows": 100000,
+    "batch_gpu_size": 10000,
+    "random_seed": 45
+  },
+  "validation": {
+    "expected_leakage_rms": 0.001,
+    "casa_comparison_tolerance": 0.005,
+    "stokes_required": ["I", "Q", "U", "V"]
+  }
+}

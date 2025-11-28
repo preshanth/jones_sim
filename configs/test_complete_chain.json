@@ -1,0 +1,139 @@
+{
+  "jones_chain": {
+    "enabled_effects": [
+      "parallactic_angle",
+      "faraday_rotation",
+      "leakage",
+      "gain",
+      "bandpass",
+      "delay"
+    ],
+    "effect_order": [
+      "parallactic_angle",
+      "leakage",
+      "gain",
+      "bandpass",
+      "delay",
+      "faraday_rotation"
+    ],
+    "description": "Complete Jones chain: P → D → G → B → K → F"
+  },
+  "effects": {
+    "delay": {
+      "type": "bandpass_amplitude_delay",
+      "delay": {
+        "tau_x": {
+          "distribution": "uniform",
+          "min": -5e-9,
+          "max": 5e-9
+        },
+        "tau_y": {
+          "distribution": "uniform",
+          "min": -5e-9,
+          "max": 5e-9
+        }
+      },
+      "seed": 42
+    },
+    "bandpass": {
+      "type": "bandpass_ripple",
+      "amplitude_ripple": 0.05,
+      "phase_ripple_deg": 3.0,
+      "n_ripples": 3,
+      "edge_rolloff": 0.1,
+      "seed": 44
+    },
+    "gain": {
+      "type": "time_variable_gain",
+      "timescale_minutes": 10.0,
+      "amplitude": {
+        "mean": 1.0,
+        "std": 0.03
+      },
+      "phase": {
+        "std_deg": 3.0
+      },
+      "seed": 43
+    },
+    "leakage": {
+      "type": "polarization_leakage",
+      "d_terms": {
+        "real": {
+          "distribution": "gaussian",
+          "mean": 0.0,
+          "std": 0.03
+        },
+        "imag": {
+          "distribution": "gaussian",
+          "mean": 0.0,
+          "std": 0.03
+        }
+      },
+      "seed": 45
+    },
+    "parallactic_angle": {
+      "type": "parallactic_angle",
+      "telescope_latitude_deg": -30.72,
+      "source_declination_deg": -45.0,
+      "observation_hours": 4.0
+    },
+    "faraday_rotation": {
+      "type": "faraday_rotation",
+      "rotation_measure": {
+        "distribution": "uniform",
+        "min": -1.5,
+        "max": 1.5,
+        "units": "rad/m²"
+      },
+      "seed": 60
+    }
+  },
+  "noise": {
+    "add_thermal_noise": true,
+    "sefd": 420.0,
+    "channel_width_hz": 1000000.0,
+    "integration_time_s": 10.0
+  },
+  "validation": {
+    "delay_threshold_ns": 0.1,
+    "amplitude_threshold": 0.01,
+    "phase_threshold_deg": 1.0,
+    "bandpass_amplitude_threshold": 0.02,
+    "bandpass_phase_threshold_deg": 2.0,
+    "leakage_magnitude_threshold": 0.01,
+    "leakage_phase_threshold_deg": 5.0,
+    "parallactic_recovery_threshold_percent": 1.0,
+    "rm_threshold": 0.15
+  },
+  "metadata": {
+    "description": "Complete Jones calibration chain with all effects",
+    "effects_included": [
+      "K - Delay (antenna-based delays)",
+      "G - Gain (time-varying complex gains)",
+      "B - Bandpass (frequency-dependent gains)",
+      "D - Leakage (polarization cross-talk)",
+      "P - Parallactic angle (geometric polarization rotation)",
+      "F - Faraday rotation (ionospheric RM)"
+    ],
+    "calibration_order": [
+      "1. K (Delay) - removes delay errors",
+      "2. G (Gain) - time-varying amplitude and phase",
+      "3. B (Bandpass) - frequency structure",
+      "4. D (Leakage) - polarization leakage",
+      "5. P (Parallactic) - geometric polarization (computed, not solved)",
+      "6. F (Faraday) - ionospheric rotation measure"
+    ],
+    "polarization_required": true,
+    "n_correlations": 4,
+    "minimum_channels": 64,
+    "minimum_time_samples": 30,
+    "notes": [
+      "This represents the full complexity of radio interferometry calibration",
+      "Sequential calibration: each stage uses previous solutions",
+      "P is geometric (computed from hour angle, declination)",
+      "F requires many channels for RM leverage (λ² dependence)",
+      "D requires full polarization (4 correlations)",
+      "Error propagation through chain should be validated"
+    ]
+  }
+}
