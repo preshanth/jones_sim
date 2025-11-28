@@ -35,7 +35,9 @@ except ImportError:
 class CalibrationSolver:
     """Unified calibration solver for K, G, B effects."""
 
-    def __init__(self, ms_path: str, max_cpu_fraction: float = 0.5, gpu_device: int = 0):
+    def __init__(
+        self, ms_path: str, max_cpu_fraction: float = 0.5, gpu_device: int = 0
+    ):
         """Initialize solver.
 
         Args:
@@ -348,8 +350,11 @@ class CalibrationSolver:
         """
         # Check if effect exists in registry
         from jones_sim.solvable_effects import EFFECT_REGISTRY
+
         if name not in EFFECT_REGISTRY:
-            raise ValueError(f"Unknown effect: {name}. Available: {list(EFFECT_REGISTRY.keys())}")
+            raise ValueError(
+                f"Unknown effect: {name}. Available: {list(EFFECT_REGISTRY.keys())}"
+            )
 
         # Default prior configs
         defaults = {
@@ -474,7 +479,9 @@ class CalibrationSolver:
                             d_terms[ant, pol] = cparam[pol, 0, row]
 
                 self.effects["D"]["casa_values"] = d_terms
-                logger.info(f"D-terms loaded: mean amplitude={np.mean(np.abs(d_terms)):.4f}")
+                logger.info(
+                    f"D-terms loaded: mean amplitude={np.mean(np.abs(d_terms)):.4f}"
+                )
 
             tb.close()
 

@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 try:
     import jax
     import jax.numpy as jnp
-    from pytensor.link.jax.dispatch import jax_funcify
 
     JAX_AVAILABLE = True
 except ImportError:

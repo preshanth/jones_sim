@@ -27,7 +27,9 @@ def configure_jax(max_cpu_fraction: float = 0.5, gpu_device: int = 0):
             # GPU available - use it
             if gpu_device < len(gpus):
                 jax.config.update("jax_default_device", gpus[gpu_device])
-                print(f"JAX configured for GPU {gpu_device} ({len(gpus)} GPUs available)")
+                print(
+                    f"JAX configured for GPU {gpu_device} ({len(gpus)} GPUs available)"
+                )
                 return "gpu"
             else:
                 warnings.warn(
@@ -42,9 +44,7 @@ def configure_jax(max_cpu_fraction: float = 0.5, gpu_device: int = 0):
     max_threads = max(1, int(cpu_count * max_cpu_fraction))
 
     # Set JAX CPU thread limit
-    os.environ["XLA_FLAGS"] = (
-        f"--xla_force_host_platform_device_count={max_threads}"
-    )
+    os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={max_threads}"
     jax.config.update("jax_platform_name", "cpu")
 
     print(

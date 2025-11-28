@@ -9,13 +9,13 @@ Provides specialized plots for:
 """
 
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
-from bokeh.layouts import column, gridplot, row
-from bokeh.models import HoverTool, Span
-from bokeh.plotting import figure, output_file, save
+from bokeh.layouts import column, gridplot
+from bokeh.models import Span
 from bokeh.palettes import Category10_10
+from bokeh.plotting import figure, output_file, save
 
 
 def plot_bandpass_comparison(
@@ -74,11 +74,18 @@ def plot_bandpass_comparison(
     )
 
     if truth_amp is not None:
-        p_amp.line(freq_ghz, truth_amp, legend_label="Truth", color="green", line_width=2)
+        p_amp.line(
+            freq_ghz, truth_amp, legend_label="Truth", color="green", line_width=2
+        )
 
     if casa_amp is not None:
         p_amp.line(
-            freq_ghz, casa_amp, legend_label="CASA", color="red", line_dash="dashed", line_width=2
+            freq_ghz,
+            casa_amp,
+            legend_label="CASA",
+            color="red",
+            line_dash="dashed",
+            line_width=2,
         )
 
     if rec_amp is not None:
@@ -225,7 +232,12 @@ def plot_three_way_comparison(
     )
 
     p2.scatter(
-        x_vals, casa_err, size=8, color="red", legend_label=f"{casa_name} Error", alpha=0.7
+        x_vals,
+        casa_err,
+        size=8,
+        color="red",
+        legend_label=f"{casa_name} Error",
+        alpha=0.7,
     )
 
     p2.scatter(
@@ -239,7 +251,9 @@ def plot_three_way_comparison(
     )
 
     # Zero line
-    zero_line = Span(location=0, dimension="width", line_color="black", line_dash="dashed")
+    zero_line = Span(
+        location=0, dimension="width", line_color="black", line_dash="dashed"
+    )
     p2.add_layout(zero_line)
 
     # RMS indicators
@@ -289,7 +303,14 @@ def plot_leakage_dterms(
             d_xy = d_terms[name][:, 0]  # First polarization
             amps = np.abs(d_xy)
             antennas = list(range(len(amps)))
-            p1.scatter(antennas, amps.tolist(), size=8, color=color, legend_label=name.title(), alpha=0.7)
+            p1.scatter(
+                antennas,
+                amps.tolist(),
+                size=8,
+                color=color,
+                legend_label=name.title(),
+                alpha=0.7,
+            )
 
     p1.legend.location = "top_right"
     plots.append(p1)
@@ -308,7 +329,14 @@ def plot_leakage_dterms(
             d_xy = d_terms[name][:, 0]
             phases = np.angle(d_xy, deg=True)
             antennas = list(range(len(phases)))
-            p2.scatter(antennas, phases.tolist(), size=8, color=color, legend_label=name.title(), alpha=0.7)
+            p2.scatter(
+                antennas,
+                phases.tolist(),
+                size=8,
+                color=color,
+                legend_label=name.title(),
+                alpha=0.7,
+            )
 
     p2.legend.location = "top_right"
     plots.append(p2)
@@ -357,7 +385,9 @@ def plot_time_series_gains(
         if name in gains and gains[name] is not None:
             g = gains[name][:, antenna_idx, pol_idx]
             amps = np.abs(g)
-            p_amp.line(times, amps, legend_label=name.title(), color=color, line_width=2)
+            p_amp.line(
+                times, amps, legend_label=name.title(), color=color, line_width=2
+            )
 
     p_amp.legend.location = "top_right"
 
@@ -374,7 +404,9 @@ def plot_time_series_gains(
         if name in gains and gains[name] is not None:
             g = gains[name][:, antenna_idx, pol_idx]
             phases = np.angle(g, deg=True)
-            p_phase.line(times, phases, legend_label=name.title(), color=color, line_width=2)
+            p_phase.line(
+                times, phases, legend_label=name.title(), color=color, line_width=2
+            )
 
     p_phase.legend.location = "top_right"
 
@@ -415,7 +447,7 @@ def plot_error_histogram(
         height=400,
     )
 
-    colors = Category10_10[:len(errors)]
+    colors = Category10_10[: len(errors)]
 
     for (name, err_arr), color in zip(errors.items(), colors):
         hist, edges = np.histogram(err_arr, bins=bins)
@@ -431,7 +463,13 @@ def plot_error_histogram(
         )
 
     # Zero line
-    zero_line = Span(location=0, dimension="height", line_color="black", line_dash="dashed", line_width=2)
+    zero_line = Span(
+        location=0,
+        dimension="height",
+        line_color="black",
+        line_dash="dashed",
+        line_width=2,
+    )
     p.add_layout(zero_line)
 
     p.legend.location = "top_right"

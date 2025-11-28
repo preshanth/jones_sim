@@ -9,7 +9,7 @@ Supports loading simulation configurations from JSON files including:
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 
@@ -124,7 +124,10 @@ class JonesConfig:
     def _default_config(self) -> Dict:
         """Return default configuration."""
         return {
-            "metadata": {"description": "Default Jones configuration", "version": "1.0"},
+            "metadata": {
+                "description": "Default Jones configuration",
+                "version": "1.0",
+            },
             "jones_chain": {"order": [], "enabled_effects": []},
             "effects": {},
             "noise": {"enabled": False},
