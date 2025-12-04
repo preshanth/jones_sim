@@ -61,6 +61,7 @@ class ValidationPipeline:
         output_dir: str = ".",
         effects: List[str] = None,
         seed: int = 100,
+        debug: bool = False,
     ):
         """Initialize validation pipeline.
 
@@ -69,11 +70,13 @@ class ValidationPipeline:
             output_dir: Directory for output files
             effects: List of effects to validate (default: K, B, G, D)
             seed: Random seed for ground truth generation
+            debug: Enable debug output during optimization
         """
         self.ms_path = ms_path
         self.output_dir = output_dir
         self.effects = effects or ["K", "B", "G", "D"]
         self.seed = seed
+        self.debug = debug
 
         # State
         self.ground_truth = {}
@@ -339,7 +342,13 @@ class ValidationPipeline:
 
         # Optimize
         print(f"  Running MAP optimization for {effect_name}...")
-        solver.optimize(num_steps=1000)
+        debug_file = None
+        if self.debug:
+            debug_file = os.path.join(
+                self.output_dir,
+                f"{self.base_name}_{effect_name}_optimization_debug.txt"
+            )
+        solver.optimize(num_steps=1000, debug=self.debug, debug_file=debug_file)
         solver.print_summary()
 
         # Save

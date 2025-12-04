@@ -73,6 +73,9 @@ def main():
     parser.add_argument(
         "--output_dir", default=".", help="Output directory"
     )
+    parser.add_argument(
+        "--debug", action="store_true", help="Enable debug output during optimization"
+    )
     args = parser.parse_args()
 
     effects = args.effects.split(",")
@@ -100,6 +103,7 @@ def main():
         output_dir=args.output_dir,
         effects=effects,
         seed=args.seed,
+        debug=args.debug,
     )
 
     results = pipeline.run(
