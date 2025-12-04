@@ -194,6 +194,12 @@ class JonesSimulator:
             if use_gpu and CUPY_AVAILABLE:
                 cp.random.seed(noise_params["seed"])
 
+        # Set random seed if provided
+        if noise_params is not None and "seed" in noise_params:
+            np.random.seed(noise_params["seed"])
+            if use_gpu and CUPY_AVAILABLE:
+                cp.random.seed(noise_params["seed"])
+
         if not use_gpu:
             for i in range(n_vis):
                 freq = frequencies[i]

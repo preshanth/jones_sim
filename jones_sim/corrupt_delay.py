@@ -181,6 +181,21 @@ def corrupt_ms_with_delays(
         if noise_seed is not None:
             print(f"  Noise seed: {noise_seed}")
 
+    if add_noise:
+        print("✓ THERMAL NOISE ENABLED")
+        print(f"  Tsys: {tsys} K")
+        print(f"  Aperture efficiency: {aperture_eff}")
+        print(f"  Antenna diameter: {antenna_diameter} m")
+
+        # Calculate SEFD for reference
+        k_B = 1.380649e-23
+        A_geo = np.pi * (antenna_diameter / 2.0) ** 2
+        SEFD = (2 * k_B * tsys) / (aperture_eff * A_geo) / 1e-26
+        print(f"  Calculated SEFD: {SEFD:.1f} Jy")
+
+        if noise_seed is not None:
+            print(f"  Noise seed: {noise_seed}")
+
     print(f"\n{'=' * 70}")
     print("DETERMINING MS SIZE")
     print(f"{'=' * 70}")
