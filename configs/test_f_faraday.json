@@ -1,0 +1,53 @@
+{
+  "jones_chain": {
+    "enabled_effects": ["faraday_rotation"],
+    "effect_order": ["faraday_rotation"]
+  },
+  "effects": {
+    "faraday_rotation": {
+      "type": "faraday_rotation",
+      "rotation_measure": {
+        "distribution": "uniform",
+        "min": -2.0,
+        "max": 2.0,
+        "units": "rad/m²",
+        "description": "Ionospheric rotation measure"
+      },
+      "seed": 60
+    }
+  },
+  "noise": {
+    "add_thermal_noise": true,
+    "sefd": 420.0,
+    "channel_width_hz": 1000000.0,
+    "integration_time_s": 10.0
+  },
+  "validation": {
+    "rm_threshold": 0.1,
+    "units": "rad/m²",
+    "description": "RM recovery threshold"
+  },
+  "metadata": {
+    "description": "Test configuration for Faraday rotation / ionospheric RM (F) effect validation",
+    "effect_type": "F - Faraday Rotation / Rotation Measure",
+    "polarization_required": true,
+    "n_correlations": 4,
+    "frequency_dependent": true,
+    "minimum_channels": 32,
+    "notes": [
+      "Faraday rotation is caused by ionosphere",
+      "Rotation angle χ = RM × λ²",
+      "Frequency-dependent: stronger at low frequencies",
+      "Typical daytime RM: 0-5 rad/m²",
+      "Requires many frequency channels for robust RM measurement",
+      "CASA doesn't have built-in RM calibration - requires RM synthesis",
+      "Also affects tropospheric delay (separate from RM polarization effect)"
+    ],
+    "typical_values": {
+      "daytime_mid_latitude": "0-5 rad/m²",
+      "nighttime": "<1 rad/m²",
+      "high_solar_activity": "up to 10+ rad/m²",
+      "severe_storms": "can exceed 20 rad/m²"
+    }
+  }
+}

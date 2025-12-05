@@ -26,17 +26,18 @@ dependencies = [
     "scipy",
 ]
 
-[project.scripts]
-jones-sim = "jones_sim.unified_sampler:main"
-
 [project.optional-dependencies]
 plotting = [
     "bokeh",
+    "matplotlib",
 ]
 mcmc = [
     "pymc",
     "pytensor",
     "arviz",
+    "jax",
+    "jaxlib",
+    "numpyro",
 ]
 casa = [
     "casatools",
@@ -44,9 +45,13 @@ casa = [
 ]
 all = [
     "bokeh",
+    "matplotlib",
     "pymc",
     "pytensor",
     "arviz",
+    "jax",
+    "jaxlib",
+    "numpyro",
 ]
 dev = [
     "pytest",
@@ -55,9 +60,13 @@ dev = [
     "black",
     "ruff",
     "bokeh",
+    "matplotlib",
     "pymc",
     "pytensor",
     "arviz",
+    "jax",
+    "jaxlib",
+    "numpyro",
 ]
 
 [tool.setuptools.packages.find]

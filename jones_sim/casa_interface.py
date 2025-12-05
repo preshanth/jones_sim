@@ -568,3 +568,274 @@ def compare_ms_structure(ms1_path: str, ms2_path: str) -> None:
     quick_ms_summary(ms1_path)
     print("\nSecond MS:")
     quick_ms_summary(ms2_path)
+
+
+# =============================================================================
+# DELAY TABLE UNWRAPPING
+# =============================================================================
+
+
+def read_delay_table(
+    ktable_path: str,
+    n_antennas: int,
+    unwrap: bool = False,
+    ms_path: str = None,
+    max_wraps: int = 20,
+    apply_sign_flip: bool = True,
+    spw: Union[str, int] = 0,
+) -> np.ndarray:
+    """Read CASA K-table delays with optional unwrapping.
+
+    Args:
+        ktable_path: Path to CASA K-table
+        n_antennas: Number of antennas
+        unwrap: Whether to unwrap phase wraps
+        ms_path: Path to MS (required if unwrap=True)
+        max_wraps: Maximum wrap offset to search (±max_wraps)
+        apply_sign_flip: Apply sign flip (CASA returns corrections, not corruptions)
+        spw: Spectral window selection for unwrapping (CASA MSSelection syntax)
+
+    Returns:
+        delays_ns: Delays in nanoseconds [n_antennas]
+    """
+    if not CASA_AVAILABLE:
+        raise ImportError("casatools required for reading delay tables")
+
+    # Read raw delays from table
+    tb = casatools.table()
+    tb.open(ktable_path)
+    fparam = tb.getcol("FPARAM")  # nanoseconds
+    antennas = tb.getcol("ANTENNA1")
+    flags = tb.getcol("FLAG")
+    tb.close()
+
+    casa_delays_ns = np.zeros(n_antennas)
+    delay_counts = np.zeros(n_antennas)
+
+    # Average over polarizations and channels
+    if fparam.ndim == 3:
+        n_pol, n_chan, n_rows = fparam.shape
+        for row in range(n_rows):
+            ant = antennas[row]
+            for pol in range(n_pol):
+                for chan in range(n_chan):
+                    if not flags[pol, chan, row]:
+                        casa_delays_ns[ant] += fparam[pol, chan, row]
+                        delay_counts[ant] += 1
+    elif fparam.ndim == 2:
+        n_pol, n_rows = fparam.shape
+        for row in range(n_rows):
+            ant = antennas[row]
+            for pol in range(n_pol):
+                if not flags[pol, row]:
+                    casa_delays_ns[ant] += fparam[pol, row]
+                    delay_counts[ant] += 1
+
+    # Average
+    nonzero_mask = delay_counts > 0
+    casa_delays_ns[nonzero_mask] /= delay_counts[nonzero_mask]
+
+    # Unwrap if requested
+    if unwrap:
+        if ms_path is None:
+            raise ValueError("ms_path required for unwrapping")
+        casa_delays_ns = unwrap_delay_table(
+            ms_path, casa_delays_ns, max_wraps, apply_sign_flip, spw
+        )
+    elif apply_sign_flip:
+        # Just apply sign flip without unwrapping
+        casa_delays_ns = -casa_delays_ns
+
+    return casa_delays_ns
+
+
+def unwrap_delay_table(
+    ms_path: str,
+    casa_delays_ns: np.ndarray,
+    max_wraps: int = 20,
+    apply_sign_flip: bool = True,
+    spw: Union[str, int] = 0,
+) -> np.ndarray:
+    """Unwrap CASA delay table using phase residual minimization.
+
+    CASA's delay solver can wrap into different 2π branches for different antennas.
+    This function finds the correct unwrapping by testing wrap offsets and picking
+    the one that minimizes phase residuals across frequency.
+
+    Algorithm:
+        For each antenna:
+        1. Try wrap offsets n = -max_wraps to +max_wraps
+        2. For each offset: delay_test = casa_delay + n * (1/freq_center)
+        3. Apply this delay to baselines involving this antenna
+        4. Measure RMS of phase residuals across frequency
+        5. Pick offset with minimum RMS
+
+    Args:
+        ms_path: Path to measurement set
+        casa_delays_ns: Raw CASA delays in nanoseconds [n_antennas]
+        max_wraps: Maximum wrap offset to try (±max_wraps)
+        apply_sign_flip: Apply sign flip (CASA corrections vs corruptions)
+        spw: Spectral window selection (CASA MSSelection syntax)
+
+    Returns:
+        unwrapped_delays_ns: Unwrapped delays in nanoseconds [n_antennas]
+    """
+    if not CASA_AVAILABLE:
+        raise ImportError("casatools required for unwrapping")
+
+    print(f"\nUnwrapping delays using phase residuals (±{max_wraps} wraps)...")
+
+    # Use MeasurementSetHandler for all MS access
+    ms_handler = MeasurementSetHandler(ms_path)
+
+    # Read DATA column
+    print("  Reading DATA column...")
+    data_dict = ms_handler.read_visibilities(spw=str(spw))
+    data = data_dict["data"]
+    ant1 = data_dict["antenna1"]
+    ant2 = data_dict["antenna2"]
+    flag = data_dict["flag"]
+    freqs = data_dict["frequency"]
+
+    # Read MODEL_DATA column separately (to avoid double RAM)
+    print("  Reading MODEL_DATA column...")
+    # Temporarily read MODEL_DATA via table tool (until we extend read_visibilities)
+    # TODO: Add column selection to read_visibilities() to avoid this
+    tb = casatools.table()
+    tb.open(ms_path)
+
+    # Apply same SPW selection as DATA read
+    # For now, assume MODEL_DATA has same structure
+    model = tb.getcol("MODEL_DATA")
+    tb.close()
+
+    # Validate shapes match
+    if data.shape != model.shape:
+        raise ValueError(
+            f"DATA and MODEL_DATA shape mismatch: {data.shape} vs {model.shape}"
+        )
+
+    n_antennas = len(casa_delays_ns)
+    freq_center = np.mean(freqs)
+    wrap_period_ns = 1e9 / freq_center
+
+    print(f"  Frequency range: {freqs[0]/1e9:.3f} - {freqs[-1]/1e9:.3f} GHz")
+    print(f"  Wrap period: {wrap_period_ns:.3f} ns at {freq_center/1e9:.3f} GHz")
+
+    # Apply sign flip if requested (CASA returns corrections)
+    casa_with_sign = -casa_delays_ns if apply_sign_flip else casa_delays_ns
+
+    # Unwrap each antenna
+    unwrapped_ns = np.zeros(n_antennas)
+
+    for ant in range(n_antennas):
+        # Find baselines involving this antenna
+        baseline_mask = (ant1 == ant) | (ant2 == ant)
+
+        if not np.any(baseline_mask):
+            # No baselines for this antenna
+            unwrapped_ns[ant] = casa_with_sign[ant]
+            continue
+
+        # Get data for these baselines
+        data_subset = data[:, :, baseline_mask]  # (n_corr, n_chan, n_baselines)
+        model_subset = model[:, :, baseline_mask]
+        flag_subset = flag[:, :, baseline_mask]
+        ant1_subset = ant1[baseline_mask]
+        ant2_subset = ant2[baseline_mask]
+
+        # Test different wrap offsets
+        best_rms = np.inf
+        best_offset = 0
+
+        for n_wrap in range(-max_wraps, max_wraps + 1):
+            # Test delay with this wrap offset
+            test_delays_ns = casa_with_sign.copy()
+            test_delays_ns[ant] = casa_with_sign[ant] + n_wrap * wrap_period_ns
+
+            # Compute phase residuals for baselines involving this antenna
+            rms = _compute_phase_residual_rms(
+                data_subset,
+                model_subset,
+                flag_subset,
+                ant1_subset,
+                ant2_subset,
+                test_delays_ns,
+                freqs,
+            )
+
+            if rms < best_rms:
+                best_rms = rms
+                best_offset = n_wrap
+
+        unwrapped_ns[ant] = casa_with_sign[ant] + best_offset * wrap_period_ns
+
+        if best_offset != 0:
+            print(
+                f"  Ant {ant}: offset {best_offset:+3d} wraps "
+                f"({casa_delays_ns[ant]:.2f} → {unwrapped_ns[ant]:.2f} ns, RMS={best_rms:.3f} rad)"
+            )
+
+    print("✓ Unwrapping complete")
+    return unwrapped_ns
+
+
+def _compute_phase_residual_rms(
+    data: np.ndarray,
+    model: np.ndarray,
+    flag: np.ndarray,
+    ant1: np.ndarray,
+    ant2: np.ndarray,
+    delays_ns: np.ndarray,
+    freqs: np.ndarray,
+) -> float:
+    """Compute RMS phase residual after applying delay corrections.
+
+    Args:
+        data: Observed visibility data (n_corr, n_chan, n_baselines)
+        model: Model visibility data (n_corr, n_chan, n_baselines)
+        flag: Flags (n_corr, n_chan, n_baselines)
+        ant1: Antenna 1 indices (n_baselines,)
+        ant2: Antenna 2 indices (n_baselines,)
+        delays_ns: Delays to test in nanoseconds (n_antennas,)
+        freqs: Channel frequencies in Hz (n_chan,)
+
+    Returns:
+        rms: RMS phase residual in radians
+    """
+    n_corr, n_chan, n_baselines = data.shape
+    delays_sec = delays_ns * 1e-9
+
+    # Compute delay phase for each baseline
+    tau1 = delays_sec[ant1]  # (n_baselines,)
+    tau2 = delays_sec[ant2]
+    delay_phase = (
+        2 * np.pi * (tau1[:, None] - tau2[:, None]) * freqs[None, :]
+    )  # (n_baselines, n_chan)
+
+    # Apply delay correction to data
+    # V_corrected = V_data * exp(-i * delay_phase)
+    phase_correction = np.exp(-1j * delay_phase)  # (n_baselines, n_chan)
+
+    # Broadcast to all correlations: (n_baselines, n_chan) -> (n_corr, n_chan, n_baselines)
+    # data shape: (n_corr, n_chan, n_baselines)
+    # Need: (1, n_chan, n_baselines)
+    phase_correction_bc = phase_correction.T[
+        None, :, :
+    ]  # Transpose then add corr dimension
+
+    data_corrected = data * phase_correction_bc
+
+    # Compute phase residual: angle(V_corrected / V_model)
+    ratio = data_corrected / (model + 1e-10)  # Avoid division by zero
+    phase_residual = np.angle(ratio)
+
+    # Mask flagged data
+    phase_residual_masked = phase_residual[~flag]
+
+    if len(phase_residual_masked) == 0:
+        return np.inf
+
+    # RMS across all unflagged data
+    rms = np.sqrt(np.mean(phase_residual_masked**2))
+    return rms

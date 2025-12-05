@@ -5,6 +5,7 @@ __version__ = "0.1.0"
 # Core simulation components
 # Calibration solver
 from .antsol import AntSolSolver, solve_gains_from_ms
+from .config import JonesConfig, load_config
 from .effects import (
     BandpassDelay,
     CrosshandPhase,
@@ -14,6 +15,7 @@ from .effects import (
     RLDelayDifference,
     RotationMeasure,
 )
+from .jax_config import configure_jax
 from .simulator import JonesSimulator
 from .source_models import (
     SourceModel,
@@ -51,6 +53,10 @@ __all__ = [
     # Simulation
     "JonesSimulator",
     "VisibilityGenerator",
+    # Configuration
+    "JonesConfig",
+    "load_config",
+    "configure_jax",
     # Effects
     "ParallacticAngle",
     "ElectronicGains",
@@ -85,3 +91,15 @@ if CASA_AVAILABLE:
 
 if MS_CALIBRATION_AVAILABLE:
     __all__.extend(["MSCalibrator", "quick_gaincal"])
+
+# Delay solver (requires CASA and PyMC)
+try:
+    from .corrupt_delay import corrupt_ms_with_delays  # noqa: F401
+    from .dbs_solver import BayesianDelaySampler  # noqa: F401
+
+    # from .dbs_solver import run as run_delay_solver
+
+    DELAY_SOLVER_AVAILABLE = True
+    __all__.extend(["BayesianDelaySampler", "corrupt_ms_with_delays"])
+except ImportError:
+    DELAY_SOLVER_AVAILABLE = False
