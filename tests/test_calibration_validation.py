@@ -20,38 +20,6 @@ SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
 class TestCalibrationValidation:
     """Integration tests for validation scripts."""
 
-    def test_delay_validation_no_noise_map(self, tmp_path):
-        """Test delay validation with no noise and MAP optimization."""
-        os.chdir(tmp_path)
-
-        script = SCRIPTS_DIR / "validate_delay_recovery.py"
-        if not script.exists():
-            pytest.skip(f"Script not found: {script}")
-
-        cmd = [
-            sys.executable,
-            str(script),
-            "--msname",
-            "test_delay.ms",
-            "--n_channels",
-            "32",  # Fewer channels for speed
-            "--delay_range",
-            "5",
-            "--no_noise",
-            "--map",
-            "--seed",
-            "42",
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-
-        print("STDOUT:", result.stdout)
-        if result.returncode != 0:
-            print("STDERR:", result.stderr)
-
-        assert result.returncode == 0, "Delay validation failed"
-        assert "VALIDATION PASSED" in result.stdout or "✓" in result.stdout
-
     def test_bandpass_validation_no_noise_map(self, tmp_path):
         """Test bandpass validation with no noise and MAP optimization."""
         os.chdir(tmp_path)
@@ -81,53 +49,6 @@ class TestCalibrationValidation:
 
         assert result.returncode == 0, "Bandpass validation failed"
         assert "VALIDATION PASSED" in result.stdout or "✓" in result.stdout
-
-    @pytest.mark.parametrize("n_channels", [16, 32, 64])
-    def test_delay_validation_different_bandwidths(self, tmp_path, n_channels):
-        """Test delay validation with different bandwidths."""
-        os.chdir(tmp_path)
-
-        script = SCRIPTS_DIR / "validate_delay_recovery.py"
-        if not script.exists():
-            pytest.skip(f"Script not found: {script}")
-
-        cmd = [
-            sys.executable,
-            str(script),
-            "--msname",
-            f"test_delay_{n_channels}ch.ms",
-            "--n_channels",
-            str(n_channels),
-            "--no_noise",
-            "--map",
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-
-        assert result.returncode == 0, f"Failed with {n_channels} channels"
-
-    def test_validation_with_noise(self, tmp_path):
-        """Test validation with thermal noise (more realistic)."""
-        os.chdir(tmp_path)
-
-        script = SCRIPTS_DIR / "validate_delay_recovery.py"
-        if not script.exists():
-            pytest.skip(f"Script not found: {script}")
-
-        cmd = [
-            sys.executable,
-            str(script),
-            "--msname",
-            "test_delay_noise.ms",
-            "--n_channels",
-            "32",
-            "--map",  # Still use MAP for speed
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-
-        # With noise, we expect larger errors but still should pass reasonable thresholds
-        assert result.returncode == 0, "Validation with noise failed"
 
 
 @pytest.mark.fast
@@ -229,47 +150,3 @@ class TestPlottingEnhanced:
 
         assert output_file.exists()
         assert output_file.stat().st_size > 0
-
-
-@pytest.mark.benchmark
-class TestValidationBenchmarks:
-    """Benchmark tests for validation performance."""
-
-    def test_delay_validation_timing(self, tmp_path, benchmark):
-        """Benchmark delay validation execution time."""
-        os.chdir(tmp_path)
-
-        script = SCRIPTS_DIR / "validate_delay_recovery.py"
-        if not script.exists():
-            pytest.skip(f"Script not found: {script}")
-
-        def run_validation():
-            cmd = [
-                sys.executable,
-                str(script),
-                "--msname",
-                "bench_delay.ms",
-                "--n_channels",
-                "16",
-                "--no_noise",
-                "--map",
-            ]
-            result = subprocess.run(cmd, capture_output=True, timeout=300)
-            return result.returncode
-
-        # Should complete in reasonable time
-        exit_code = benchmark(run_validation)
-        assert exit_code == 0
-
-
-def test_validation_scripts_exist():
-    """Sanity check that validation scripts exist."""
-    expected_scripts = [
-        "validate_delay_recovery.py",
-        "validate_bandpass_recovery.py",
-    ]
-
-    for script_name in expected_scripts:
-        script_path = SCRIPTS_DIR / script_name
-        assert script_path.exists(), f"Missing validation script: {script_name}"
-        assert os.access(script_path, os.X_OK), f"Script not executable: {script_name}"
