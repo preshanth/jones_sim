@@ -656,28 +656,36 @@ class CalibrationSolver:
                     delays = all_params["K"]  # (n_ant,)
 
                     # Extract phases per baseline (only parallel hands: XX and YY)
-                    ratio = vis_obs_jax / (vis_model_jax + 1e-10)  # (n_row, n_chan, n_pol)
+                    ratio = vis_obs_jax / (
+                        vis_model_jax + 1e-10
+                    )  # (n_row, n_chan, n_pol)
                     phi_obs_all = jnp.angle(ratio)  # (n_row, n_chan, n_pol)
 
                     # Select only XX (pol=0) and YY (pol=3)
-                    phi_obs = jnp.stack([phi_obs_all[:, :, 0], phi_obs_all[:, :, 3]], axis=2)  # (n_row, n_chan, 2)
+                    phi_obs = jnp.stack(
+                        [phi_obs_all[:, :, 0], phi_obs_all[:, :, 3]], axis=2
+                    )  # (n_row, n_chan, 2)
 
                     # Unwrap phases across frequency axis
                     # Detect wraps: if phase jump > π, add ±2π correction
                     phi_diff = jnp.diff(phi_obs, axis=1)  # (n_row, n_chan-1, 2)
 
                     # Wrap detection: add 2π when jumping down, subtract 2π when jumping up
-                    corrections = jnp.where(phi_diff > jnp.pi, -2*jnp.pi,
-                                  jnp.where(phi_diff < -jnp.pi, 2*jnp.pi, 0.0))
+                    corrections = jnp.where(
+                        phi_diff > jnp.pi,
+                        -2 * jnp.pi,
+                        jnp.where(phi_diff < -jnp.pi, 2 * jnp.pi, 0.0),
+                    )
 
                     # Cumulative unwrapping
-                    cumulative_corrections = jnp.cumsum(corrections, axis=1)  # (n_row, n_chan-1, 2)
+                    cumulative_corrections = jnp.cumsum(
+                        corrections, axis=1
+                    )  # (n_row, n_chan-1, 2)
 
                     # Apply corrections (pad first channel with zeros since it's reference)
-                    corrections_padded = jnp.concatenate([
-                        jnp.zeros((n_row, 1, 2)),
-                        cumulative_corrections
-                    ], axis=1)  # (n_row, n_chan, 2)
+                    corrections_padded = jnp.concatenate(
+                        [jnp.zeros((n_row, 1, 2)), cumulative_corrections], axis=1
+                    )  # (n_row, n_chan, 2)
 
                     phi_unwrapped = phi_obs + corrections_padded  # (n_row, n_chan, 2)
 
@@ -686,10 +694,14 @@ class CalibrationSolver:
                     freq_centered = freqs_jax - freq_mean  # (n_chan,)
                     freq_var = jnp.sum(freq_centered**2)
 
-                    phi_mean = jnp.mean(phi_unwrapped, axis=1, keepdims=True)  # (n_row, 1, 2)
+                    phi_mean = jnp.mean(
+                        phi_unwrapped, axis=1, keepdims=True
+                    )  # (n_row, 1, 2)
                     phi_centered = phi_unwrapped - phi_mean  # (n_row, n_chan, 2)
 
-                    cov = jnp.sum(freq_centered[None, :, None] * phi_centered, axis=1)  # (n_row, 2)
+                    cov = jnp.sum(
+                        freq_centered[None, :, None] * phi_centered, axis=1
+                    )  # (n_row, 2)
                     slope_obs = cov / freq_var  # (n_row, 2)
 
                     # Predicted slope from delays: dφ/dν = 2π(τ₁ - τ₂)
@@ -697,10 +709,13 @@ class CalibrationSolver:
                     slope_pred = 2 * jnp.pi * tau_diff  # (n_row,)
 
                     # Estimate uncertainty in slope
-                    amplitude_xx_yy = jnp.stack([
-                        jnp.abs(vis_model_jax[:, :, 0]),
-                        jnp.abs(vis_model_jax[:, :, 3])
-                    ], axis=2)  # (n_row, n_chan, 2)
+                    amplitude_xx_yy = jnp.stack(
+                        [
+                            jnp.abs(vis_model_jax[:, :, 0]),
+                            jnp.abs(vis_model_jax[:, :, 3]),
+                        ],
+                        axis=2,
+                    )  # (n_row, n_chan, 2)
 
                     sigma_phase = noise_sigma / (amplitude_xx_yy + 1e-10)
                     sigma_phase_avg = jnp.mean(sigma_phase, axis=1)  # (n_row, 2)
@@ -710,12 +725,14 @@ class CalibrationSolver:
                     numpyro.sample(
                         "phase_slope",
                         dist.Normal(slope_pred[:, None], sigma_slope),
-                        obs=slope_obs
+                        obs=slope_obs,
                     )
 
                 else:
                     # Single channel: fall back to cosine/sine likelihood
-                    logger.info("Single channel: using cosine/sine likelihood for delays")
+                    logger.info(
+                        "Single channel: using cosine/sine likelihood for delays"
+                    )
 
                     delays = all_params["K"]
                     ratio = vis_obs_jax / (vis_model_jax + 1e-10)
@@ -731,8 +748,16 @@ class CalibrationSolver:
                     amplitude = jnp.abs(vis_model_jax) + 1e-10
                     sigma_phase = noise_sigma / amplitude
 
-                    numpyro.sample("cos_residuals", dist.Normal(cos_pred[:, :, None], sigma_phase), obs=cos_obs)
-                    numpyro.sample("sin_residuals", dist.Normal(sin_pred[:, :, None], sigma_phase), obs=sin_obs)
+                    numpyro.sample(
+                        "cos_residuals",
+                        dist.Normal(cos_pred[:, :, None], sigma_phase),
+                        obs=cos_obs,
+                    )
+                    numpyro.sample(
+                        "sin_residuals",
+                        dist.Normal(sin_pred[:, :, None], sigma_phase),
+                        obs=sin_obs,
+                    )
 
             else:
                 # Standard visibility likelihood for gains, bandpass, multi-effect
@@ -768,7 +793,12 @@ class CalibrationSolver:
         logger.info("Model built")
 
     def optimize(
-        self, num_steps: int = 1000, learning_rate: float = 0.01, seed: int = 0, debug: bool = False, debug_file: str = None
+        self,
+        num_steps: int = 1000,
+        learning_rate: float = 0.01,
+        seed: int = 0,
+        debug: bool = False,
+        debug_file: str = None,
     ):
         """Find MAP estimate using gradient descent.
 
@@ -789,12 +819,12 @@ class CalibrationSolver:
 
         # Set up debug file
         debug_fp = None
-        if 'K' in self.effects and debug:
+        if "K" in self.effects and debug:
             if debug_file is None:
                 debug_file = "delay_optimization_debug.txt"
-            debug_fp = open(debug_file, 'w')
+            debug_fp = open(debug_file, "w")
 
-            casa_delays_ns = self.effects['K']['casa_values'] * 1e9
+            casa_delays_ns = self.effects["K"]["casa_values"] * 1e9
             debug_fp.write(f"{'='*70}\n")
             debug_fp.write("INITIAL DELAYS (CASA)\n")
             debug_fp.write(f"{'='*70}\n")
@@ -823,26 +853,31 @@ class CalibrationSolver:
                 params = svi.get_params(svi_state)
                 current_delays = guide.median(params)
 
-                if 'delays_free' in current_delays:
-                    delays_full = jnp.concatenate([
-                        jnp.array([self.effects['K']['casa_values'][0]]),
-                        current_delays['delays_free']
-                    ])
+                if "delays_free" in current_delays:
+                    delays_full = jnp.concatenate(
+                        [
+                            jnp.array([self.effects["K"]["casa_values"][0]]),
+                            current_delays["delays_free"],
+                        ]
+                    )
                     delays_ns = np.array(delays_full) * 1e9
 
                     debug_fp.write(f"\nStep {step:4d}, Loss: {loss:.2f}\n")
                     # Write all antennas (not just problematic ones)
                     for ant in range(self.n_antennas):
-                        casa_val = self.effects['K']['casa_values'][ant] * 1e9
+                        casa_val = self.effects["K"]["casa_values"][ant] * 1e9
                         diff = delays_ns[ant] - casa_val
                         marker = " ⚠" if abs(diff) > 0.1 else ""
-                        debug_fp.write(f"  Ant {ant:2d}: {delays_ns[ant]:8.3f} ns (Δ={diff:+7.3f} ns from CASA){marker}\n")
+                        debug_fp.write(
+                            f"  Ant {ant:2d}: {delays_ns[ant]:8.3f} ns (Δ={diff:+7.3f} ns from CASA){marker}\n"
+                        )
                     debug_fp.flush()
 
         # Store losses
         class SVIResult:
             def __init__(self, losses):
                 self.losses = losses
+
         svi_result = SVIResult(losses)
 
         # Extract MAP estimates
@@ -866,20 +901,26 @@ class CalibrationSolver:
             debug_fp.write("FINAL DELAYS vs CASA\n")
             debug_fp.write(f"{'='*70}\n")
 
-            if 'delays_free' in self.map_estimates:
-                delays_full = jnp.concatenate([
-                    jnp.array([self.effects['K']['casa_values'][0]]),
-                    self.map_estimates['delays_free']
-                ])
+            if "delays_free" in self.map_estimates:
+                delays_full = jnp.concatenate(
+                    [
+                        jnp.array([self.effects["K"]["casa_values"][0]]),
+                        self.map_estimates["delays_free"],
+                    ]
+                )
                 delays_ns = np.array(delays_full) * 1e9
-                casa_delays_ns = self.effects['K']['casa_values'] * 1e9
+                casa_delays_ns = self.effects["K"]["casa_values"] * 1e9
 
-                debug_fp.write(f"{'Ant':<5} {'Final (ns)':<12} {'CASA (ns)':<12} {'Diff (ns)':<12}\n")
+                debug_fp.write(
+                    f"{'Ant':<5} {'Final (ns)':<12} {'CASA (ns)':<12} {'Diff (ns)':<12}\n"
+                )
                 debug_fp.write("-" * 50 + "\n")
                 for ant in range(self.n_antennas):
                     diff = delays_ns[ant] - casa_delays_ns[ant]
                     marker = " ⚠" if abs(diff) > 0.1 else ""
-                    debug_fp.write(f"{ant:<5} {delays_ns[ant]:>11.3f} {casa_delays_ns[ant]:>11.3f} {diff:>+11.3f}{marker}\n")
+                    debug_fp.write(
+                        f"{ant:<5} {delays_ns[ant]:>11.3f} {casa_delays_ns[ant]:>11.3f} {diff:>+11.3f}{marker}\n"
+                    )
 
             # Write loss progression summary
             debug_fp.write(f"\n{'='*70}\n")
