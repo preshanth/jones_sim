@@ -225,7 +225,7 @@ class TestPlottingEnhanced:
 
         output_file = tmp_path / "test_histogram.html"
 
-        p = plot_error_histogram(errors, output_file_path=str(output_file))
+        plot_error_histogram(errors, output_file_path=str(output_file))
 
         assert output_file.exists()
         assert output_file.stat().st_size > 0
