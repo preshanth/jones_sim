@@ -1,0 +1,36 @@
+
+======================================================================
+FULL JONES CHAIN VALIDATION
+======================================================================
+MS: sim_full_chain.ms
+Effects: K
+Output: .
+Noise: True
+Resume: False
+
+Generating ground truth for effects: K
+  K: ±10.0 ns
+✓ Ground truth saved: ./sim_full_chain_truth.npz
+
+Corrupting MS with effects: K
+
+DEBUG: Delays being applied (ns):
+  Ant 1: -4.433 ns
+  Ant 8: -7.266 ns
+  Ant 14: -5.606 ns
+  Ant 17: -6.561 ns
+  Ant 23: -3.278 ns
+  Ant 25: -2.543 ns
+  Ant 26: -9.886 ns
+
+======================================================================
+CORRUPTING MS WITH EFFECTS
+======================================================================
+Antennas: 27
+SPWs: 1
+Effects: delays
+
+Data shape: 4 corr × 64 chan × 52650 rows
+  Added: delays
+
+Corrupting visibilities... 
