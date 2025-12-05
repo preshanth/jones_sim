@@ -776,7 +776,7 @@ def unwrap_delay_table(
                 f"({casa_delays_ns[ant]:.2f} → {unwrapped_ns[ant]:.2f} ns, RMS={best_rms:.3f} rad)"
             )
 
-    print(f"✓ Unwrapping complete")
+    print("✓ Unwrapping complete")
     return unwrapped_ns
 
 
