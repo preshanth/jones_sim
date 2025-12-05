@@ -14,9 +14,18 @@ import pytest
 # Find scripts directory
 SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
 
+# Check if CASA is available
+try:
+    import casatools
+    import casatasks
+    CASA_AVAILABLE = True
+except ImportError:
+    CASA_AVAILABLE = False
+
 
 @pytest.mark.slow
 @pytest.mark.integration
+@pytest.mark.skipif(not CASA_AVAILABLE, reason="CASA tools not available")
 class TestCalibrationValidation:
     """Integration tests for validation scripts."""
 
