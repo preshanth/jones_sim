@@ -36,13 +36,12 @@ import os
 import sys
 
 import numpy as np
-
 from casatools import table
 
-from jones_sim import JonesSimulator, JonesConfig
-from jones_sim.effects import RotationMeasure
+from jones_sim import JonesSimulator
 from jones_sim.calibration_solver import CalibrationSolver
 from jones_sim.casa_interface import MeasurementSetHandler
+from jones_sim.effects import RotationMeasure
 from jones_sim.plotting_enhanced import plot_three_way_comparison
 from scripts.simulate_3c286 import simulate_3c286
 
@@ -113,7 +112,9 @@ def corrupt_ms_with_faraday(ms_path, rm_values, add_noise=True, sefd=420.0):
     summary = ms_handler.get_observation_summary()
     spw_info = summary["frequency_info"][0]
     freqs = spw_info["chan_freqs"]
-    chan_width = spw_info.get("chan_width", freqs[1] - freqs[0] if len(freqs) > 1 else 1e6)
+    chan_width = spw_info.get(
+        "chan_width", freqs[1] - freqs[0] if len(freqs) > 1 else 1e6
+    )
 
     # Create simulator with Faraday rotation
     sim = JonesSimulator()
@@ -152,8 +153,9 @@ def corrupt_ms_with_faraday(ms_path, rm_values, add_noise=True, sefd=420.0):
 
         # Add complex Gaussian noise
         sigma_complex = sigma / np.sqrt(2)
-        noise = np.random.normal(0, sigma_complex, corrupted_data.shape) + \
-                1j * np.random.normal(0, sigma_complex, corrupted_data.shape)
+        noise = np.random.normal(
+            0, sigma_complex, corrupted_data.shape
+        ) + 1j * np.random.normal(0, sigma_complex, corrupted_data.shape)
         corrupted_data = corrupted_data + noise
         print(f"  Added thermal noise (sigma={sigma:.4f} Jy)")
 
@@ -194,7 +196,7 @@ def run_solver(ms_path, rm_initial, use_map=True, draws=500, tune=500):
     else:
         solver.solve(method="mcmc", num_warmup=tune, num_samples=draws)
 
-    print(f"✓ Solver complete")
+    print("✓ Solver complete")
     return solver
 
 
@@ -224,16 +226,16 @@ def compare_rm_results(
     rm_res = our_rm[1:] - truth_rm[1:]
     rms_rm = np.sqrt(np.mean(rm_res**2))
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("FARADAY ROTATION (RM) VALIDATION RESULTS")
-    print("="*60)
+    print("=" * 60)
     print(f"Truth RM range: {np.min(truth_rm):.3f} to {np.max(truth_rm):.3f} rad/m²")
     print(f"Recovered RM range: {np.min(our_rm):.3f} to {np.max(our_rm):.3f} rad/m²")
     print(f"\nRM RMS residual: {rms_rm:.4f} rad/m²")
     print(f"Threshold: {rm_threshold:.2f} rad/m²")
 
     # Print antenna-by-antenna comparison
-    print(f"\nPer-antenna RM (rad/m²):")
+    print("\nPer-antenna RM (rad/m²):")
     print(f"{'Ant':>4} {'Truth':>8} {'Recovered':>10} {'Residual':>10}")
     print("-" * 36)
     for ant in range(min(10, n_antennas)):  # Show first 10
@@ -251,7 +253,7 @@ def compare_rm_results(
         print(f"\n✗ FAIL: RM RMS {rms_rm:.4f} >= {rm_threshold:.2f} rad/m²")
 
     # Generate plots
-    print(f"\nGenerating validation plots...")
+    print("\nGenerating validation plots...")
     ant_indices = np.arange(n_antennas)
 
     plot_three_way_comparison(
@@ -265,7 +267,7 @@ def compare_rm_results(
         output_file_path=f"{output_prefix}_rm_comparison.html",
     )
 
-    print("="*60)
+    print("=" * 60)
     if passed:
         print("✓ FARADAY (RM) VALIDATION PASSED")
         return 0
@@ -275,7 +277,9 @@ def compare_rm_results(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Validate Faraday rotation / RM recovery")
+    parser = argparse.ArgumentParser(
+        description="Validate Faraday rotation / RM recovery"
+    )
     parser.add_argument("--msname", default="sim_faraday_test.ms", help="MS name")
     parser.add_argument("--skip_sim", action="store_true", help="Skip simulation")
     parser.add_argument("--rm_range", type=float, default=2.0, help="RM range (rad/m²)")
@@ -287,7 +291,9 @@ def main():
 
     # Create simulated MS if needed (full polarization, many channels for RM)
     if not args.skip_sim or not os.path.exists(args.msname):
-        print(f"Creating simulated 3C286 MS with full polarization ({args.n_channels} channels for RM)...")
+        print(
+            f"Creating simulated 3C286 MS with full polarization ({args.n_channels} channels for RM)..."
+        )
         simulate_3c286(
             msname=args.msname,
             n_channels=args.n_channels,
@@ -305,7 +311,7 @@ def main():
 
     if n_channels_actual < 16:
         print(f"⚠ Warning: Only {n_channels_actual} channels - RM recovery may be poor")
-        print(f"  Recommend >= 32 channels for reliable RM measurement")
+        print("  Recommend >= 32 channels for reliable RM measurement")
 
     # Generate ground truth RM
     truth_rm = generate_ground_truth_rm(
@@ -314,7 +320,7 @@ def main():
         seed=args.seed,
     )
 
-    print(f"Generated rotation measures:")
+    print("Generated rotation measures:")
     print(f"  RM range: ±{args.rm_range:.2f} rad/m²")
     print(f"  RM RMS: {np.sqrt(np.mean(truth_rm**2)):.3f} rad/m²")
     print(f"  Channels: {n_channels_actual} (λ² leverage for RM)")

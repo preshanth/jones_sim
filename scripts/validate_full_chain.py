@@ -11,19 +11,19 @@ The heavy lifting is in ValidationPipeline class.
 """
 
 import argparse
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from validation_pipeline import ValidationPipeline
+from simulate_3c286 import simulate_3c286
 from validation_lib import (
+    print_bandpass_comparison,
     print_delay_comparison,
     print_gains_comparison,
-    print_bandpass_comparison,
     print_leakage_comparison,
     print_section_header,
 )
-from simulate_3c286 import simulate_3c286
+from validation_pipeline import ValidationPipeline
 
 
 def print_results(pipeline):
@@ -42,37 +42,24 @@ def print_results(pipeline):
         elif effect == "D":
             print_leakage_comparison(results)
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Validate full Jones calibration chain (K, B, G, D, P)"
     )
+    parser.add_argument("--msname", default="sim_full_chain.ms", help="MS name")
+    parser.add_argument("--skip_sim", action="store_true", help="Skip MS simulation")
     parser.add_argument(
-        "--msname", default="sim_full_chain.ms", help="MS name"
+        "--effects",
+        default="K,G",
+        help="Comma-separated list of effects (default: K,G)",
     )
-    parser.add_argument(
-        "--skip_sim", action="store_true", help="Skip MS simulation"
-    )
-    parser.add_argument(
-        "--effects", default="K,G", help="Comma-separated list of effects (default: K,G)"
-    )
-    parser.add_argument(
-        "--n_channels", type=int, default=64, help="Number of channels"
-    )
-    parser.add_argument(
-        "--seed", type=int, default=100, help="Random seed"
-    )
-    parser.add_argument(
-        "--no_noise", action="store_true", help="Skip thermal noise"
-    )
-    parser.add_argument(
-        "--resume", action="store_true", help="Resume from saved state"
-    )
-    parser.add_argument(
-        "--no_plots", action="store_true", help="Skip plot generation"
-    )
-    parser.add_argument(
-        "--output_dir", default=".", help="Output directory"
-    )
+    parser.add_argument("--n_channels", type=int, default=64, help="Number of channels")
+    parser.add_argument("--seed", type=int, default=100, help="Random seed")
+    parser.add_argument("--no_noise", action="store_true", help="Skip thermal noise")
+    parser.add_argument("--resume", action="store_true", help="Resume from saved state")
+    parser.add_argument("--no_plots", action="store_true", help="Skip plot generation")
+    parser.add_argument("--output_dir", default=".", help="Output directory")
     parser.add_argument(
         "--debug", action="store_true", help="Enable debug output during optimization"
     )

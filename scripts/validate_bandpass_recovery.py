@@ -28,14 +28,14 @@ import os
 import sys
 
 import numpy as np
-
 from casatasks import bandpass
 from casatools import table
 
-from jones_sim import BandpassDelay, JonesSimulator, JonesConfig
 from jones_sim.calibration_solver import CalibrationSolver
 from jones_sim.casa_interface import MeasurementSetHandler
-from jones_sim.plotting_enhanced import plot_bandpass_comparison, plot_three_way_comparison
+from jones_sim.plotting_enhanced import (
+    plot_bandpass_comparison,
+)
 
 
 def generate_ground_truth_bandpass(
@@ -80,7 +80,9 @@ def generate_ground_truth_bandpass(
     for ant in range(n_antennas):
         for pol in range(2):
             # Delay phase component
-            delay = delays_sec[ant] if pol == 0 else delays_sec[ant] * 1.02  # Slight pol difference
+            delay = (
+                delays_sec[ant] if pol == 0 else delays_sec[ant] * 1.02
+            )  # Slight pol difference
             phase = 2 * np.pi * (freqs - ref_freq) * delay
 
             # Amplitude component with ripple
@@ -175,8 +177,9 @@ def corrupt_ms_with_bandpass(
         sigma = sefd / np.sqrt(2 * chan_width * int_time)
         sigma_complex = sigma / np.sqrt(2)
 
-        noise = np.random.normal(0, sigma_complex, corrupted_data.shape) + \
-                1j * np.random.normal(0, sigma_complex, corrupted_data.shape)
+        noise = np.random.normal(
+            0, sigma_complex, corrupted_data.shape
+        ) + 1j * np.random.normal(0, sigma_complex, corrupted_data.shape)
         corrupted_data += noise
 
         print(f"\nThermal noise added: σ={sigma:.4f} Jy")
@@ -334,8 +337,8 @@ def compare_bandpass_results(
     casa_amp_err = casa_amp - truth_amp
     rec_amp_err = rec_amp - truth_amp
 
-    casa_amp_rms = np.sqrt(np.mean(casa_amp_err[1:, :]**2))  # Exclude ref ant
-    rec_amp_rms = np.sqrt(np.mean(rec_amp_err[1:, :]**2))
+    casa_amp_rms = np.sqrt(np.mean(casa_amp_err[1:, :] ** 2))  # Exclude ref ant
+    rec_amp_rms = np.sqrt(np.mean(rec_amp_err[1:, :] ** 2))
 
     # Phase
     truth_phase = np.angle(truth_bp[:, 0, :], deg=True)
@@ -345,8 +348,8 @@ def compare_bandpass_results(
     casa_phase_err = casa_phase - truth_phase
     rec_phase_err = rec_phase - truth_phase
 
-    casa_phase_rms = np.sqrt(np.mean(casa_phase_err[1:, :]**2))
-    rec_phase_rms = np.sqrt(np.mean(rec_phase_err[1:, :]**2))
+    casa_phase_rms = np.sqrt(np.mean(casa_phase_err[1:, :] ** 2))
+    rec_phase_rms = np.sqrt(np.mean(rec_phase_err[1:, :] ** 2))
 
     print("\nBandpass Amplitude (XX) RMS Errors:")
     print(f"  CASA:      {casa_amp_rms:.4f}")
@@ -371,9 +374,7 @@ def compare_bandpass_results(
 
 def main():
     parser = argparse.ArgumentParser(description="Bandpass recovery validation")
-    parser.add_argument(
-        "--msname", default="sim_bandpass_test.ms", help="MS name"
-    )
+    parser.add_argument("--msname", default="sim_bandpass_test.ms", help="MS name")
     parser.add_argument("--skip_sim", action="store_true", help="Skip simulation")
     parser.add_argument("--n_channels", type=int, default=64, help="Number of channels")
     parser.add_argument("--seed", type=int, default=44, help="Random seed")
@@ -391,6 +392,7 @@ def main():
     # Step 1: Simulate or use existing MS
     if not args.skip_sim or not os.path.exists(args.msname):
         from simulate_3c286 import simulate_3c286
+
         simulate_3c286(
             msname=args.msname,
             n_channels=args.n_channels,
@@ -408,7 +410,7 @@ def main():
     n_channels = len(freqs)
     ms_handler.close()
 
-    print(f"\nGenerating ground truth bandpass:")
+    print("\nGenerating ground truth bandpass:")
     print(f"  Antennas: {n_antennas}")
     print(f"  Channels: {n_channels}")
     print(f"  Freq range: {freqs[0]/1e9:.3f} - {freqs[-1]/1e9:.3f} GHz")
@@ -462,8 +464,12 @@ def main():
     amp_pass = results["recovered_amp_rms"] < amp_threshold
     phase_pass = results["recovered_phase_rms"] < phase_threshold
 
-    print(f"\nAmplitude RMS: {results['recovered_amp_rms']:.4f} {'✓ PASS' if amp_pass else '✗ FAIL'} (threshold: {amp_threshold})")
-    print(f"Phase RMS:     {results['recovered_phase_rms']:.2f}° {'✓ PASS' if phase_pass else '✗ FAIL'} (threshold: {phase_threshold}°)")
+    print(
+        f"\nAmplitude RMS: {results['recovered_amp_rms']:.4f} {'✓ PASS' if amp_pass else '✗ FAIL'} (threshold: {amp_threshold})"
+    )
+    print(
+        f"Phase RMS:     {results['recovered_phase_rms']:.2f}° {'✓ PASS' if phase_pass else '✗ FAIL'} (threshold: {phase_threshold}°)"
+    )
 
     if amp_pass and phase_pass:
         print(f"\n{'✓' * 35}")

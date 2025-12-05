@@ -11,13 +11,13 @@ Follows the established pattern from validate_delay_recovery.py.
 """
 
 import os
-import numpy as np
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, List, Optional, Tuple
 
+import numpy as np
 from casatools import table
+
 from jones_sim import JonesSimulator
 from jones_sim.casa_interface import MeasurementSetHandler
-
 
 # =============================================================================
 # GROUND TRUTH GENERATION
@@ -254,7 +254,7 @@ def corrupt_ms(
         print(f"  Added: {name}")
 
     # Reshape for simulator: (n_vis, 4)
-    n_vis = n_chan * n_row
+    #n_vis = n_chan * n_row
     ideal_vis = model_data.transpose(2, 1, 0).reshape(-1, n_corr)
     frequencies = np.tile(freqs, n_row)
     times = np.repeat(times_col, n_chan)
@@ -277,17 +277,16 @@ def corrupt_ms(
         int_time = np.median(np.diff(unique_times)) if len(unique_times) > 1 else 2.0
         sigma = sefd / np.sqrt(2 * chan_width * int_time)
 
-        print(f"\nAdding thermal noise:")
+        print("\nAdding thermal noise:")
         print(f"  SEFD: {sefd} Jy")
         print(f"  Channel width: {chan_width/1e6:.2f} MHz")
         print(f"  Int time: {int_time} s")
         print(f"  Sigma: {sigma:.4f} Jy per visibility")
 
         sigma_complex = sigma / np.sqrt(2)
-        noise = (
-            np.random.normal(0, sigma_complex, corrupted_data.shape)
-            + 1j * np.random.normal(0, sigma_complex, corrupted_data.shape)
-        )
+        noise = np.random.normal(
+            0, sigma_complex, corrupted_data.shape
+        ) + 1j * np.random.normal(0, sigma_complex, corrupted_data.shape)
         corrupted_data += noise
     else:
         print("\nNo thermal noise (exact recovery test)")
@@ -305,10 +304,14 @@ def corrupt_ms(
     tb.close()
 
     print("✓ DATA column corrupted")
-    print(f"  Corruption verification: max diff = {max_diff:.3e}, mean diff = {mean_diff:.3e}")
+    print(
+        f"  Corruption verification: max diff = {max_diff:.3e}, mean diff = {mean_diff:.3e}"
+    )
 
     if max_diff < 1e-10:
-        print("  WARNING: DATA and MODEL_DATA are identical - corruption may have failed!")
+        print(
+            "  WARNING: DATA and MODEL_DATA are identical - corruption may have failed!"
+        )
 
 
 # =============================================================================
@@ -337,7 +340,7 @@ def run_casa_calibration(
     Returns:
         caltable path
     """
-    from casatasks import gaincal, bandpass, polcal
+    from casatasks import bandpass, gaincal, polcal
 
     print(f"\n{'=' * 70}")
     print(f"RUNNING CASA {cal_type} CALIBRATION")
@@ -585,12 +588,7 @@ def save_solver_results(filepath: str, solver, effect_name: str) -> None:
     solution = solver.get_solution(effect_name)
     trace_data = {key: val for key, val in solver.trace.items()}
 
-    np.savez(
-        filepath,
-        solution=solution,
-        effect_name=effect_name,
-        **trace_data
-    )
+    np.savez(filepath, solution=solution, effect_name=effect_name, **trace_data)
     print(f"✓ Solver results saved: {filepath}")
 
 
@@ -681,27 +679,31 @@ def print_delay_comparison(results: Dict) -> None:
     n_antennas = len(truth)
 
     # Print table
-    print(f"\n{'Ant':<5} {'Truth':<12} {'CASA':<12} {'Ours':<12} {'CASA-Truth':<12} {'Ours-Truth':<12}")
+    print(
+        f"\n{'Ant':<5} {'Truth':<12} {'CASA':<12} {'Ours':<12} {'CASA-Truth':<12} {'Ours-Truth':<12}"
+    )
     print("-" * 70)
 
     for ant in range(n_antennas):
         casa_diff = casa[ant] - truth[ant]
         our_diff = ours[ant] - truth[ant]
-        print(f"{ant:<5} {truth[ant]:>11.3f} {casa[ant]:>11.3f} {ours[ant]:>11.3f} "
-              f"{casa_diff:>11.3f} {our_diff:>11.3f}")
+        print(
+            f"{ant:<5} {truth[ant]:>11.3f} {casa[ant]:>11.3f} {ours[ant]:>11.3f} "
+            f"{casa_diff:>11.3f} {our_diff:>11.3f}"
+        )
 
     # Statistics
     print(f"\n{'=' * 70}")
     print("ERROR STATISTICS (excluding reference antenna)")
     print(f"{'=' * 70}")
 
-    print(f"\nCASA errors (ns):")
+    print("\nCASA errors (ns):")
     print(f"  Mean: {results['casa_mean']:.4f}")
     print(f"  Std:  {results['casa_std']:.4f}")
     print(f"  RMS:  {results['casa_rms']:.4f}")
     print(f"  Max:  {results['casa_max']:.4f}")
 
-    print(f"\nOur errors (ns):")
+    print("\nOur errors (ns):")
     print(f"  Mean: {results['our_mean']:.4f}")
     print(f"  Std:  {results['our_std']:.4f}")
     print(f"  RMS:  {results['our_rms']:.4f}")
@@ -758,7 +760,9 @@ def compare_gains(
             casa_phase_diff = (casa_phase - truth_phase + np.pi) % (2 * np.pi) - np.pi
             our_phase_diff = (ours_phase - truth_phase + np.pi) % (2 * np.pi) - np.pi
 
-            casa_phase_errors.append(casa_phase_diff * 180 / np.pi)  # Convert to degrees
+            casa_phase_errors.append(
+                casa_phase_diff * 180 / np.pi
+            )  # Convert to degrees
             our_phase_errors.append(our_phase_diff * 180 / np.pi)
 
     casa_amp_errors = np.array(casa_amp_errors)
@@ -774,7 +778,10 @@ def compare_gains(
     for ant in range(1, n_antennas):
         for pol in range(2):
             idx = (ant - 1) * 2 + pol
-            if np.abs(our_amp_errors[idx]) > amp_threshold or np.abs(our_phase_errors[idx]) > phase_threshold:
+            if (
+                np.abs(our_amp_errors[idx]) > amp_threshold
+                or np.abs(our_phase_errors[idx]) > phase_threshold
+            ):
                 bad_ants.add(ant)
 
     return {
@@ -809,7 +816,9 @@ def print_gains_comparison(results: Dict) -> None:
 
     # Print table for XX polarization
     print("\nXX Polarization:")
-    print(f"{'Ant':<5} {'Truth Amp':<12} {'CASA Amp':<12} {'Ours Amp':<12} {'Truth Phase':<12} {'CASA Phase':<12} {'Ours Phase':<12}")
+    print(
+        f"{'Ant':<5} {'Truth Amp':<12} {'CASA Amp':<12} {'Ours Amp':<12} {'Truth Phase':<12} {'CASA Phase':<12} {'Ours Phase':<12}"
+    )
     print("-" * 90)
 
     for ant in range(min(n_antennas, 10)):  # First 10 antennas
@@ -819,7 +828,9 @@ def print_gains_comparison(results: Dict) -> None:
         t_ph = np.angle(truth[ant, 0]) * 180 / np.pi
         c_ph = np.angle(casa[ant, 0]) * 180 / np.pi
         o_ph = np.angle(ours[ant, 0]) * 180 / np.pi
-        print(f"{ant:<5} {t_amp:>11.4f} {c_amp:>11.4f} {o_amp:>11.4f} {t_ph:>11.2f} {c_ph:>11.2f} {o_ph:>11.2f}")
+        print(
+            f"{ant:<5} {t_amp:>11.4f} {c_amp:>11.4f} {o_amp:>11.4f} {t_ph:>11.2f} {c_ph:>11.2f} {o_ph:>11.2f}"
+        )
 
     if n_antennas > 10:
         print(f"... ({n_antennas - 10} more antennas)")
@@ -829,14 +840,14 @@ def print_gains_comparison(results: Dict) -> None:
     print("ERROR STATISTICS (excluding reference antenna)")
     print(f"{'=' * 70}")
 
-    print(f"\nCASA amplitude errors:")
+    print("\nCASA amplitude errors:")
     print(f"  RMS: {results['casa_amp_rms']:.4f}")
-    print(f"\nOur amplitude errors:")
+    print("\nOur amplitude errors:")
     print(f"  RMS: {results['our_amp_rms']:.4f}")
 
-    print(f"\nCASA phase errors (deg):")
+    print("\nCASA phase errors (deg):")
     print(f"  RMS: {results['casa_phase_rms']:.4f}")
-    print(f"\nOur phase errors (deg):")
+    print("\nOur phase errors (deg):")
     print(f"  RMS: {results['our_phase_rms']:.4f}")
 
     if results["bad_antennas"]:
@@ -916,15 +927,15 @@ def print_bandpass_comparison(results: Dict) -> None:
     """
     print_section_header("BANDPASS COMPARISON: TRUTH vs CASA vs OURS")
 
-    print(f"\nAmplitude RMS error:")
+    print("\nAmplitude RMS error:")
     print(f"  CASA: {results['casa_amp_rms']:.4f}")
     print(f"  Ours: {results['our_amp_rms']:.4f}")
 
-    print(f"\nPhase RMS error (deg):")
+    print("\nPhase RMS error (deg):")
     print(f"  CASA: {results['casa_phase_rms']:.4f}")
     print(f"  Ours: {results['our_phase_rms']:.4f}")
 
-    print(f"\n(See plots for per-channel details)")
+    print("\n(See plots for per-channel details)")
 
 
 def compare_leakage(
@@ -986,7 +997,9 @@ def print_leakage_comparison(results: Dict) -> None:
     n_antennas = truth.shape[0]
 
     # Print table
-    print(f"\n{'Ant':<5} {'Truth |d_xy|':<15} {'CASA |d_xy|':<15} {'Ours |d_xy|':<15} {'Truth |d_yx|':<15} {'CASA |d_yx|':<15} {'Ours |d_yx|':<15}")
+    print(
+        f"\n{'Ant':<5} {'Truth |d_xy|':<15} {'CASA |d_xy|':<15} {'Ours |d_xy|':<15} {'Truth |d_yx|':<15} {'CASA |d_yx|':<15} {'Ours |d_yx|':<15}"
+    )
     print("-" * 95)
 
     for ant in range(min(n_antennas, 10)):
@@ -996,7 +1009,9 @@ def print_leakage_comparison(results: Dict) -> None:
         t_yx = np.abs(truth[ant, 1])
         c_yx = np.abs(casa[ant, 1])
         o_yx = np.abs(ours[ant, 1])
-        print(f"{ant:<5} {t_xy:>14.4f} {c_xy:>14.4f} {o_xy:>14.4f} {t_yx:>14.4f} {c_yx:>14.4f} {o_yx:>14.4f}")
+        print(
+            f"{ant:<5} {t_xy:>14.4f} {c_xy:>14.4f} {o_xy:>14.4f} {t_yx:>14.4f} {c_yx:>14.4f} {o_yx:>14.4f}"
+        )
 
     if n_antennas > 10:
         print(f"... ({n_antennas - 10} more antennas)")
@@ -1005,11 +1020,11 @@ def print_leakage_comparison(results: Dict) -> None:
     print("ERROR STATISTICS (excluding reference antenna)")
     print(f"{'=' * 70}")
 
-    print(f"\nCASA errors:")
+    print("\nCASA errors:")
     print(f"  Mean: {results['casa_mean']:.6f}")
     print(f"  RMS:  {results['casa_rms']:.6f}")
 
-    print(f"\nOur errors:")
+    print("\nOur errors:")
     print(f"  Mean: {results['our_mean']:.6f}")
     print(f"  RMS:  {results['our_rms']:.6f}")
 

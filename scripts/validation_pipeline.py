@@ -9,35 +9,36 @@ Design principles:
 """
 
 import os
+
+# Import validation utilities
+import sys
+from typing import Dict, List
+
 import numpy as np
-from typing import Dict, List, Optional
 
 from jones_sim import BandpassDelay, ElectronicGains, InstrumentalLeakage
 from jones_sim.calibration_solver import CalibrationSolver
 from jones_sim.casa_interface import MeasurementSetHandler
 from jones_sim.plotting_enhanced import (
-    plot_three_way_comparison,
     plot_bandpass_comparison,
-    plot_leakage_dterms,
+    plot_three_way_comparison,
 )
 
-# Import validation utilities
-import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from validation_lib import (
-    generate_delays,
-    generate_gains,
-    generate_bandpass,
-    generate_dterms,
     compute_parallactic_angles,
     corrupt_ms,
-    run_casa_calibration,
-    read_casa_delays,
-    read_casa_gains,
-    read_casa_bandpass,
-    read_casa_dterms,
-    save_ground_truth,
+    generate_bandpass,
+    generate_delays,
+    generate_dterms,
+    generate_gains,
     load_ground_truth,
+    read_casa_bandpass,
+    read_casa_delays,
+    read_casa_dterms,
+    read_casa_gains,
+    run_casa_calibration,
+    save_ground_truth,
 )
 
 
@@ -133,14 +134,18 @@ class ValidationPipeline:
         # B: Bandpass
         if "B" in self.effects:
             bandpass, bp_delays = generate_bandpass(
-                n_antennas, n_channels, freqs,
+                n_antennas,
+                n_channels,
+                freqs,
                 delay_range_ns=bandpass_delay_range_ns,
                 amp_variation=bandpass_amp_variation,
                 seed=self.seed + 1,
             )
             truth["B_bandpass"] = bandpass
             truth["B_delays_sec"] = bp_delays
-            print(f"  B: ±{bandpass_delay_range_ns} ns delay, {bandpass_amp_variation} amp var")
+            print(
+                f"  B: ±{bandpass_delay_range_ns} ns delay, {bandpass_amp_variation} amp var"
+            )
 
         # G: Gains
         if "G" in self.effects:
@@ -198,7 +203,9 @@ class ValidationPipeline:
                 return bandpass[ant_id, 1, freq_idx]
 
             bandpass_effect = ElectronicGains(g_xx=bp_xx, g_yy=bp_yy)
-            effects["bandpass"] = bandpass_effect  # Use 'bandpass' to match effect_order
+            effects["bandpass"] = (
+                bandpass_effect  # Use 'bandpass' to match effect_order
+            )
 
         # G: Gains
         if "G" in self.effects:
@@ -208,8 +215,9 @@ class ValidationPipeline:
 
         # D: Leakage (with parallactic angle rotation P → D)
         if "D" in self.effects:
-            from jones_sim import ParallacticAngle
             from casatools import table
+
+            from jones_sim import ParallacticAngle
 
             # Get MS metadata for parang computation
             ms_handler = MeasurementSetHandler(self.ms_path)
@@ -284,10 +292,7 @@ class ValidationPipeline:
         gaintables = []  # Cumulative for sequential correction
 
         for effect in self.effects:
-            caltable = os.path.join(
-                self.output_dir,
-                f"{self.base_name}_casa.{effect}"
-            )
+            caltable = os.path.join(self.output_dir, f"{self.base_name}_casa.{effect}")
 
             print(f"\n  Solving {effect}...")
             run_casa_calibration(
@@ -321,7 +326,7 @@ class ValidationPipeline:
         solver.load_data(spw=spw, solint="inf")
 
         # Apply prior corrections
-        prior_effects = self.effects[:self.effects.index(effect_name)]
+        prior_effects = self.effects[: self.effects.index(effect_name)]
         for prior in prior_effects:
             if prior in self.our_solutions and self.our_solutions[prior] is not None:
                 prior_solution = self.our_solutions[prior].get_solution(prior)
@@ -346,15 +351,14 @@ class ValidationPipeline:
         if self.debug:
             debug_file = os.path.join(
                 self.output_dir,
-                f"{self.base_name}_{effect_name}_optimization_debug.txt"
+                f"{self.base_name}_{effect_name}_optimization_debug.txt",
             )
         solver.optimize(num_steps=1000, debug=self.debug, debug_file=debug_file)
         solver.print_summary()
 
         # Save
         solver_file = os.path.join(
-            self.output_dir,
-            f"{self.base_name}_{effect_name}_solver.npz"
+            self.output_dir, f"{self.base_name}_{effect_name}_solver.npz"
         )
         solution = solver.get_solution(effect_name)
         np.savez(solver_file, solution=solution, **solver.trace)
@@ -377,9 +381,7 @@ class ValidationPipeline:
 
         if effect_name == "K":
             # Read CASA delays
-            casa_delays_ns = read_casa_delays(
-                self.casa_solutions["K"], n_antennas
-            )
+            casa_delays_ns = read_casa_delays(self.casa_solutions["K"], n_antennas)
 
             # Get our delays
             solver = self.our_solutions["K"]
@@ -392,6 +394,7 @@ class ValidationPipeline:
             # Compare using validation_lib function
             truth_delays_ns = truth["K_delays_ns"]
             from validation_lib import compare_delays
+
             return compare_delays(truth_delays_ns, casa_delays_ns, our_delays_ns)
 
         elif effect_name == "G":
@@ -405,12 +408,15 @@ class ValidationPipeline:
             # Compare
             truth_gains = truth["G_gains"]
             from validation_lib import compare_gains
+
             return compare_gains(truth_gains, casa_gains, our_gains)
 
         elif effect_name == "B":
             # Read CASA bandpass
             n_channels = truth["n_channels"]
-            casa_bp = read_casa_bandpass(self.casa_solutions["B"], n_antennas, n_channels)
+            casa_bp = read_casa_bandpass(
+                self.casa_solutions["B"], n_antennas, n_channels
+            )
 
             # Get our bandpass
             solver = self.our_solutions["B"]
@@ -423,6 +429,7 @@ class ValidationPipeline:
             truth_bp = truth["B_bandpass"]
             freqs = truth["freqs"]
             from validation_lib import compare_bandpass
+
             return compare_bandpass(truth_bp, casa_bp, our_bp, freqs)
 
         elif effect_name == "D":
@@ -436,6 +443,7 @@ class ValidationPipeline:
             # Compare
             truth_dterms = truth["D_dterms"]
             from validation_lib import compare_leakage
+
             return compare_leakage(truth_dterms, casa_dterms, our_dterms)
 
         return {}
@@ -455,8 +463,7 @@ class ValidationPipeline:
             return None
 
         plot_file = os.path.join(
-            self.output_dir,
-            f"{self.base_name}_{effect_name}_comparison.html"
+            self.output_dir, f"{self.base_name}_{effect_name}_comparison.html"
         )
 
         if effect_name == "K":
@@ -494,7 +501,7 @@ class ValidationPipeline:
                 casa_bp=results["casa"],
                 recovered_bp=results["ours"],
                 antenna_idx=1,  # Plot antenna 1 (not ref)
-                pol_idx=0,      # XX polarization
+                pol_idx=0,  # XX polarization
                 output_file_path=plot_file,
             )
 
