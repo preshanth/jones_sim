@@ -254,7 +254,7 @@ def corrupt_ms(
         print(f"  Added: {name}")
 
     # Reshape for simulator: (n_vis, 4)
-    #n_vis = n_chan * n_row
+    # n_vis = n_chan * n_row
     ideal_vis = model_data.transpose(2, 1, 0).reshape(-1, n_corr)
     frequencies = np.tile(freqs, n_row)
     times = np.repeat(times_col, n_chan)

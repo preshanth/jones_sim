@@ -16,9 +16,8 @@ SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
 
 # Check if CASA is available
 try:
-    import casatools
-    import casatasks
-    CASA_AVAILABLE = True
+    from importlib.util import find_spec
+    CASA_AVAILABLE = find_spec("casatools") is not None and find_spec("casatasks") is not None
 except ImportError:
     CASA_AVAILABLE = False
 
