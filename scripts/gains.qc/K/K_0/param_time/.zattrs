@@ -1,0 +1,12 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "param_time"
+    ],
+    "__daskms_zarr_attr__": {
+        "array_type": "numpy.ndarray",
+        "coordinate": true,
+        "dims": [
+            "param_time"
+        ]
+    }
+}

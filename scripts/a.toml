@@ -1,0 +1,46 @@
+##############################
+# Input MS
+##############################
+[input_ms]
+path = "sim_full_chain.ms"
+data_column = "DATA"
+
+##############################
+# Model
+##############################
+[input_model]
+recipe = "MODEL_DATA"
+
+##############################
+# Solver configuration
+##############################
+[solver]
+terms = ["K", "G"]           # order matters: K solved first, then G
+iter_recipe = [20, 20]       # 20 iterations for K, then 20 for G
+
+##############################
+# Delay term (K)
+##############################
+[K]
+type = "delay"
+time_interval = "0"          # full scan
+freq_interval = "0"          # full band
+initial_estimate = true      # good for wideband
+
+##############################
+# Gain term (G)
+##############################
+[G]
+type = "complex"
+time_interval = 0           # example: 30s complex gains
+freq_interval = 0            # per-channel or full-band
+direction_dependent = false
+
+##############################
+# Output
+##############################
+[output]
+gain_directory = "gains.qc"
+log_directory = "logs.qc"
+overwrite = true
+

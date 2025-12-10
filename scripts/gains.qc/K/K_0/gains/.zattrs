@@ -1,0 +1,20 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "gain_time",
+        "gain_freq",
+        "antenna",
+        "direction",
+        "correlation"
+    ],
+    "__daskms_zarr_attr__": {
+        "array_type": "dask.array.core.Array",
+        "coordinate": false,
+        "dims": [
+            "gain_time",
+            "gain_freq",
+            "antenna",
+            "direction",
+            "correlation"
+        ]
+    }
+}

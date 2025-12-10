@@ -1,0 +1,14 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time_chunk",
+        "freq_chunk"
+    ],
+    "__daskms_zarr_attr__": {
+        "array_type": "dask.array.core.Array",
+        "coordinate": false,
+        "dims": [
+            "time_chunk",
+            "freq_chunk"
+        ]
+    }
+}

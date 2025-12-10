@@ -1,0 +1,12 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "freq_chunk"
+    ],
+    "__daskms_zarr_attr__": {
+        "array_type": "numpy.ndarray",
+        "coordinate": true,
+        "dims": [
+            "freq_chunk"
+        ]
+    }
+}

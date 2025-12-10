@@ -1,0 +1,501 @@
+{
+    "metadata": {
+        ".zattrs": {
+            "DATA_DESC_ID": 0,
+            "FIELD_ID": 0,
+            "FIELD_NAME": "3C286",
+            "GAIN_AXES": [
+                "gain_time",
+                "gain_freq",
+                "antenna",
+                "direction",
+                "correlation"
+            ],
+            "GAIN_SPEC": [
+                [
+                    1
+                ],
+                [
+                    1
+                ],
+                [
+                    27
+                ],
+                [
+                    1
+                ],
+                [
+                    4
+                ]
+            ],
+            "NAME": "G",
+            "SCAN_NUMBER": 1,
+            "TYPE": "complex",
+            "__daskms_zarr_attr__": {
+                "chunks": {
+                    "antenna": [
+                        27
+                    ],
+                    "correlation": [
+                        4
+                    ],
+                    "direction": [
+                        1
+                    ],
+                    "freq_chunk": [
+                        1
+                    ],
+                    "gain_freq": [
+                        1
+                    ],
+                    "gain_time": [
+                        1
+                    ],
+                    "time_chunk": [
+                        1
+                    ]
+                }
+            }
+        },
+        ".zgroup": {
+            "zarr_format": 2
+        },
+        "antenna/.zarray": {
+            "chunks": [
+                27
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<U3",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                27
+            ],
+            "zarr_format": 2
+        },
+        "antenna/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "antenna"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "numpy.ndarray",
+                "coordinate": true,
+                "dims": [
+                    "antenna"
+                ]
+            }
+        },
+        "conv_iter/.zarray": {
+            "chunks": [
+                1,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<i8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "conv_iter/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "time_chunk",
+                "freq_chunk"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "dask.array.core.Array",
+                "coordinate": false,
+                "dims": [
+                    "time_chunk",
+                    "freq_chunk"
+                ]
+            }
+        },
+        "conv_perc/.zarray": {
+            "chunks": [
+                1,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "conv_perc/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "time_chunk",
+                "freq_chunk"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "dask.array.core.Array",
+                "coordinate": false,
+                "dims": [
+                    "time_chunk",
+                    "freq_chunk"
+                ]
+            }
+        },
+        "correlation/.zarray": {
+            "chunks": [
+                4
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<U2",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                4
+            ],
+            "zarr_format": 2
+        },
+        "correlation/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "correlation"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "numpy.ndarray",
+                "coordinate": true,
+                "dims": [
+                    "correlation"
+                ]
+            }
+        },
+        "direction/.zarray": {
+            "chunks": [
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<i4",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1
+            ],
+            "zarr_format": 2
+        },
+        "direction/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "direction"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "numpy.ndarray",
+                "coordinate": true,
+                "dims": [
+                    "direction"
+                ]
+            }
+        },
+        "freq_chunk/.zarray": {
+            "chunks": [
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<i8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1
+            ],
+            "zarr_format": 2
+        },
+        "freq_chunk/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "freq_chunk"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "numpy.ndarray",
+                "coordinate": true,
+                "dims": [
+                    "freq_chunk"
+                ]
+            }
+        },
+        "gain_flags/.zarray": {
+            "chunks": [
+                1,
+                1,
+                27,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "|i1",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1,
+                1,
+                27,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "gain_flags/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "gain_time",
+                "gain_freq",
+                "antenna",
+                "direction"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "dask.array.core.Array",
+                "coordinate": false,
+                "dims": [
+                    "gain_time",
+                    "gain_freq",
+                    "antenna",
+                    "direction"
+                ]
+            }
+        },
+        "gain_freq/.zarray": {
+            "chunks": [
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1
+            ],
+            "zarr_format": 2
+        },
+        "gain_freq/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "gain_freq"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "numpy.ndarray",
+                "coordinate": true,
+                "dims": [
+                    "gain_freq"
+                ]
+            }
+        },
+        "gain_time/.zarray": {
+            "chunks": [
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1
+            ],
+            "zarr_format": 2
+        },
+        "gain_time/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "gain_time"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "numpy.ndarray",
+                "coordinate": true,
+                "dims": [
+                    "gain_time"
+                ]
+            }
+        },
+        "gains/.zarray": {
+            "chunks": [
+                1,
+                1,
+                27,
+                1,
+                4
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<c16",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1,
+                1,
+                27,
+                1,
+                4
+            ],
+            "zarr_format": 2
+        },
+        "gains/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "gain_time",
+                "gain_freq",
+                "antenna",
+                "direction",
+                "correlation"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "dask.array.core.Array",
+                "coordinate": false,
+                "dims": [
+                    "gain_time",
+                    "gain_freq",
+                    "antenna",
+                    "direction",
+                    "correlation"
+                ]
+            }
+        },
+        "jhj/.zarray": {
+            "chunks": [
+                1,
+                1,
+                27,
+                1,
+                4
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<c16",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1,
+                1,
+                27,
+                1,
+                4
+            ],
+            "zarr_format": 2
+        },
+        "jhj/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "gain_time",
+                "gain_freq",
+                "antenna",
+                "direction",
+                "correlation"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "dask.array.core.Array",
+                "coordinate": false,
+                "dims": [
+                    "gain_time",
+                    "gain_freq",
+                    "antenna",
+                    "direction",
+                    "correlation"
+                ]
+            }
+        },
+        "time_chunk/.zarray": {
+            "chunks": [
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<i8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                1
+            ],
+            "zarr_format": 2
+        },
+        "time_chunk/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "time_chunk"
+            ],
+            "__daskms_zarr_attr__": {
+                "array_type": "numpy.ndarray",
+                "coordinate": true,
+                "dims": [
+                    "time_chunk"
+                ]
+            }
+        }
+    },
+    "zarr_consolidated_format": 1
+}
